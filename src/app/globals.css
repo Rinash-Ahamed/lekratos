@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+/* Brand tokens are injected from src/lib/theme.ts as :root variables. */
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-surface: var(--surface);
+  --color-sunk: var(--sunk);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-text: var(--accent-text);
+  --color-muted: var(--muted);
+  --color-olive: var(--olive);
+  --color-line: var(--line);
+  --font-serif: "Playfair Display Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 5.5rem;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  min-height: 100dvh;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--accent); color: var(--accent-fg); }
+:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 2px; }
+
+/* ---------- type ---------- */
+.serif { font-family: var(--font-serif); font-optical-sizing: auto; }
+.h-display {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+}
+.h-section {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-size: clamp(2rem, 4.6vw, 3.6rem);
+}
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.65; color: var(--muted); max-width: 38rem; }
+.prose-policy { max-width: 44rem; }
+.prose-policy p, .prose-policy li { color: var(--fg); }
+.prose-policy h2 { font-family: var(--font-serif); font-size: 1.6rem; margin: 2.2rem 0 0.6rem; }
+
+.hairline { border-color: var(--line); }
+.wrap { max-width: 1440px; margin-inline: auto; padding-inline: clamp(1.25rem, 4vw, 3.5rem); }
+
+/* ---------- links & buttons ---------- */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 300ms ease;
+}
+.link-underline:hover, .link-underline:focus-visible { background-size: 100% 1px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+  min-height: 3rem; padding: 0.85rem 1.75rem;
+  font-weight: 600; font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase;
+  border: 1px solid var(--primary); border-radius: 2px; cursor: pointer;
+  transition: transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 250ms, color 250ms, opacity 250ms;
+}
+.btn-solid { background: var(--primary); color: var(--primary-fg); }
+.btn-solid:hover:not(:disabled) { opacity: 0.9; }
+.btn-ghost { background: transparent; color: var(--fg); border-color: var(--fg); }
+.btn-ghost:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+.btn-accent { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+
+.input {
+  width: 100%; background: var(--surface); border: 1px solid var(--line);
+  padding: 0.85rem 1rem; font-size: 1rem; color: var(--fg); border-radius: 2px; min-height: 3rem;
+}
+.input::placeholder { color: var(--muted); opacity: 0.8; }
+.input:focus { outline: 2px solid var(--accent-text); outline-offset: 1px; border-color: var(--fg); }
+.input[aria-invalid="true"] { border-color: var(--accent-text); }
+.field-error { color: var(--accent-text); font-size: 0.85rem; margin-top: 0.3rem; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* ---------- brand mark: the supplied wordmark, two layers coloured from the brand tokens ---------- */
+.brand-mark { position: relative; display: inline-block; aspect-ratio: 1977 / 451; }
+.brand-mark > i {
+  position: absolute; inset: 0; display: block;
+  -webkit-mask: var(--m) center / 100% 100% no-repeat; mask: var(--m) center / 100% 100% no-repeat;
+}
+.brand-mark > i:nth-child(1) { --m: url(/brand/logo-a.png); background: var(--logo-a); }
+.brand-mark > i:nth-child(2) { --m: url(/brand/logo-b.png); background: var(--logo-b); }
+
+/* ---------- motion (transform/opacity only) ---------- */
+.reveal { opacity: 0; transform: translate3d(0, 22px, 0); transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1), transform 800ms cubic-bezier(0.16, 1, 0.3, 1); transition-delay: var(--d, 0ms); }
+.reveal.in { opacity: 1; transform: none; }
+.no-js .reveal { opacity: 1; transform: none; }
+
+/* opacity only: a transform animation on this wrapper would become the containing block of every position:fixed dialog inside it */
+@keyframes page-enter { from { opacity: 0; } to { opacity: 1; } }
+.page-enter { animation: page-enter 350ms ease-out backwards; }
+
+@keyframes drift { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(-3%, 2%, 0); } }
+.fabric-drift { animation: drift 18s ease-in-out infinite; will-change: transform; }
+
+@keyframes marquee { to { transform: translate3d(-50%, 0, 0); } }
+.marquee-track { animation: marquee 40s linear infinite; will-change: transform; }
+
+@keyframes sheet-in { from { transform: translate3d(100%, 0, 0); } to { transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.sheet-in { animation: sheet-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fade-in { animation: fade-in 250ms ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .marquee-track, .fabric-drift { animation: none; }
+}
+
+/* skeleton */
+.skeleton { background: linear-gradient(90deg, var(--sunk), var(--surface), var(--sunk)); background-size: 200% 100%; animation: sk 1.4s ease infinite; }
+@keyframes sk { to { background-position: -200% 0; } }
+
+/* sticky mobile bar safe area */
+.safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }

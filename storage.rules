@@ -1,0 +1,10 @@
+rules_version = '2';
+// Product images are served via tokenised download URLs; enquiry attachments are private.
+// Uploads/reads happen server-side only (firebase-admin bypasses rules) → deny all client access.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

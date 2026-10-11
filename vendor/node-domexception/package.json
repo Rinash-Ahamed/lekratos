@@ -1,0 +1,10 @@
+{
+  "name": "node-domexception",
+  "version": "1.0.1",
+  "description": "Local shim: the upstream package is deprecated in favour of the platform's native DOMException (Node >= 17).",
+  "type": "module",
+  "main": "index.js",
+  "exports": { ".": "./index.js" },
+  "license": "MIT",
+  "private": true
+}

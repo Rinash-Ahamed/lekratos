@@ -1,15 +1,25 @@
 import Link from "next/link";
-import { getBanners, getCollections, getPublishedProducts, getSettings } from "@/lib/catalog";
+import { getBanners, getPublishedProducts, getSettings } from "@/lib/catalog";
 import { Hero } from "@/components/Hero";
 import { FabricDivider } from "@/components/FabricDivider";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductImage } from "@/components/ProductImage";
 import { Reveal } from "@/components/Reveal";
 import { Newsletter } from "@/components/Newsletter";
+import { FitFinder, StyleFinder } from "@/components/DiscoveryStudio";
 import { inr } from "@/lib/format";
 
+const MOODS = [
+  { name: "The Everyday Edit", note: "Easy forms / repeat wear", href: "/shop" },
+  { name: "Quiet Luxury", note: "Soft tones / considered details", href: "/shop?tag=trending" },
+  { name: "After Hours", note: "Dark palette / sharper energy", href: "/shop?tag=limited" },
+  { name: "The Street Edit", note: "Graphic rhythm / loose silhouettes", href: "/shop?tag=new" },
+  { name: "Her Essentials", note: "Selected without rules", href: "/shop" },
+  { name: "His Essentials", note: "Selected without rules", href: "/shop" },
+] as const;
+
 export default async function Home() {
-  const [products, collections, banners, settings] = await Promise.all([getPublishedProducts(), getCollections(), getBanners(), getSettings()]);
+  const [products, banners, settings] = await Promise.all([getPublishedProducts(), getBanners(), getSettings()]);
   const banner = banners.find((b) => b.active);
   const fresh = [...products].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const arrivals = (fresh.some((p) => p.tags.includes("new")) ? fresh.filter((p) => p.tags.includes("new")) : fresh).slice(0, 8);
@@ -23,15 +33,10 @@ export default async function Home() {
     settings.shipping.freeAbove && ["Free shipping", `above ${inr(settings.shipping.freeAbove)}`],
     settings.returnsPolicy && ["Returns", "See our policy"],
   ].filter(Boolean) as [string, string][];
-  const collTiles = collections
-    .map((c) => ({ c, items: products.filter((p) => p.collection === c.slug) }))
-    .filter((x) => x.items.length)
-    .slice(0, 5);
 
   return (
     <>
       <Hero banner={banner} product={spotlight ?? arrivals[0]} />
-      <FabricDivider to="var(--bg)" className="-mt-px" />
 
       {products.length === 0 && (
         <section className="wrap py-20 text-center">
@@ -42,13 +47,13 @@ export default async function Home() {
       )}
 
       {facts.length > 0 && (
-        <section aria-label="Shopping information" className="wrap -mt-6 mb-12 relative z-10">
-          <div className="glass rounded-2xl border hairline p-6 sm:p-8 shadow-sm">
-            <dl className="grid grid-cols-2 gap-6 md:grid-cols-4">
+        <section aria-label="Shopping information" className="home-facts">
+          <div className="wrap">
+            <dl>
               {facts.map(([k, v]) => (
                 <div key={k}>
-                  <dt className="eyebrow text-muted">{k}</dt>
-                  <dd className="serif mt-1 text-lg">{v}</dd>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
                 </div>
               ))}
             </dl>
@@ -56,31 +61,27 @@ export default async function Home() {
         </section>
       )}
 
-      {collTiles.length > 0 && (
-        <section className="wrap py-20 md:py-28" aria-labelledby="collections-h">
-          <Reveal>
-            <p className="eyebrow text-accent-text">Collections</p>
-            <h2 id="collections-h" className="h-section mt-3 max-w-2xl">Browse by series</h2>
-          </Reveal>
-          <div className="stagger mt-10 grid gap-5 md:grid-cols-12">
-            {collTiles.map(({ c, items }, i) => (
-              <Reveal key={c.slug} delay={i * 80} className={i === 0 ? "md:col-span-7" : i === 1 ? "md:col-span-5" : "md:col-span-4"}>
-                <Link href={`/shop?collection=${c.slug}`} className="group relative block overflow-hidden bg-sunk">
-                  <div className={`relative ${i < 2 ? "aspect-[4/3] md:aspect-[16/11]" : "aspect-[4/5]"}`}>
-                    <div className="absolute inset-0 transition-transform duration-[1000ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.04]">
-                      <ProductImage product={items[0]} sizes="(min-width:768px) 40vw, 90vw" />
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-5 pt-16 text-white md:p-7">
-                      <h3 className="serif text-2xl md:text-3xl">{c.name}</h3>
-                      <p className="mt-1 text-sm opacity-90">{items.length} piece{items.length === 1 ? "" : "s"} · Explore →</p>
-                    </div>
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="wrap"><StyleFinder products={products.slice(0, 8)} /></div>
+
+      <section className="mood-shop" aria-labelledby="mood-title">
+        <div className="mood-heading wrap">
+          <div><p className="experience-number">04 / Shop by mood</p><h2 id="mood-title">Dress for the<br /><i>state you&apos;re in.</i></h2></div>
+          <p>Skip the categories. Start with a feeling, a place, or the version of yourself showing up today.</p>
+        </div>
+        <div className="mood-grid">
+          {MOODS.map((mood, index) => {
+            const product = products.length ? products[index % products.length] : undefined;
+            return (
+              <Link href={mood.href} className="mood-card" key={mood.name}>
+                {product && <ProductImage product={product} sizes="(min-width:900px) 34vw, 80vw" />}
+                <span className="mood-index">{String(index + 1).padStart(2, "0")}</span>
+                <div><p>{mood.note}</p><h3>{mood.name}</h3></div>
+                <span className="mood-arrow" aria-hidden>↗</span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       {arrivals.length > 0 && (
         <section className="py-16 md:py-28" aria-labelledby="new-h">
@@ -134,6 +135,14 @@ export default async function Home() {
         </section>
       )}
 
+      <div className="wrap"><FitFinder /></div>
+
+      <section className="brand-manifesto" aria-label="Brand statement">
+        <p>Le.Kratos / Independent artwear</p>
+        <h2>Not Made<br /><i>to Fit In.</i></h2>
+        <div><span>Original perspective</span><span>Personal expression</span><span>No prescribed uniform</span></div>
+      </section>
+
       {(story || hasSample) && (
         <section id="story" className="bg-sunk py-20 md:py-28" aria-labelledby="story-h">
           <div className="wrap grid gap-10 md:grid-cols-12">
@@ -154,6 +163,21 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      <section className="community-section" aria-labelledby="community-title">
+        <div className="community-heading">
+          <p className="experience-number">05 / Community</p>
+          <h2 id="community-title">KRATOS<br /><i>ON YOU</i></h2>
+          <p>Real people. Personal style. Share your LE KRATOS look and become part of the evolving community edit.</p>
+          <Link href="/contact">Submit your look <span aria-hidden>↗</span></Link>
+        </div>
+        <div className="community-grid" aria-label="Community gallery awaiting submissions">
+          {["Your look here", "Community / 002", "Seen differently", "Community / 004"].map((label, index) => (
+            <div className="community-slot" key={label}><span>{String(index + 1).padStart(2, "0")}</span><p>{label}</p><i aria-hidden>+</i></div>
+          ))}
+        </div>
+        <p className="community-note">No staged testimonials. This gallery will only feature community images shared with permission.</p>
+      </section>
 
       {settings.testimonials && settings.testimonials.length > 0 && (
         <section className="wrap py-20 md:py-28" aria-labelledby="voices-h">

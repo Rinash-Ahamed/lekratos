@@ -42,25 +42,27 @@ export default async function Home() {
       )}
 
       {facts.length > 0 && (
-        <section aria-label="Shopping information" className="wrap -mt-6 mb-8">
-          <dl className="grid grid-cols-2 gap-6 border-y hairline py-6 md:grid-cols-4">
-            {facts.map(([k, v]) => (
-              <div key={k}>
-                <dt className="eyebrow text-muted">{k}</dt>
-                <dd className="serif mt-1 text-lg">{v}</dd>
-              </div>
-            ))}
-          </dl>
+        <section aria-label="Shopping information" className="wrap -mt-6 mb-12 relative z-10">
+          <div className="glass rounded-2xl border hairline p-6 sm:p-8 shadow-sm">
+            <dl className="grid grid-cols-2 gap-6 md:grid-cols-4">
+              {facts.map(([k, v]) => (
+                <div key={k}>
+                  <dt className="eyebrow text-muted">{k}</dt>
+                  <dd className="serif mt-1 text-lg">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </section>
       )}
 
       {collTiles.length > 0 && (
-        <section className="wrap py-16 md:py-24" aria-labelledby="collections-h">
+        <section className="wrap py-20 md:py-28" aria-labelledby="collections-h">
           <Reveal>
             <p className="eyebrow text-accent-text">Collections</p>
             <h2 id="collections-h" className="h-section mt-3 max-w-2xl">Browse by series</h2>
           </Reveal>
-          <div className="mt-10 grid gap-5 md:grid-cols-12">
+          <div className="stagger mt-10 grid gap-5 md:grid-cols-12">
             {collTiles.map(({ c, items }, i) => (
               <Reveal key={c.slug} delay={i * 80} className={i === 0 ? "md:col-span-7" : i === 1 ? "md:col-span-5" : "md:col-span-4"}>
                 <Link href={`/shop?collection=${c.slug}`} className="group relative block overflow-hidden bg-sunk">
@@ -81,7 +83,7 @@ export default async function Home() {
       )}
 
       {arrivals.length > 0 && (
-        <section className="py-12 md:py-20" aria-labelledby="new-h">
+        <section className="py-16 md:py-28" aria-labelledby="new-h">
           <div className="wrap flex items-end justify-between gap-6">
             <Reveal>
               <p className="eyebrow text-accent-text">Just in</p>
@@ -89,7 +91,7 @@ export default async function Home() {
             </Reveal>
             <Link href="/shop?tag=new" className="eyebrow link-underline hidden py-1 sm:block">View all</Link>
           </div>
-          <div className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-4" tabIndex={0} aria-label="New arrivals, scrollable">
+          <div className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-6 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-6 pt-2" tabIndex={0} aria-label="New arrivals, scrollable">
             {arrivals.map((p, i) => (
               <div key={p.id} className="w-[72vw] shrink-0 snap-start sm:w-[320px] lg:w-[340px]">
                 <ProductCard product={p} priority={i < 2} sizes="340px" />
@@ -102,7 +104,7 @@ export default async function Home() {
       {spotlight && (
         <section className="bg-primary text-primary-fg">
           <FabricDivider to="var(--primary)" flip className="-mb-px" />
-          <div className="wrap grid items-center gap-10 pb-16 pt-4 md:grid-cols-2 md:pb-24">
+          <div className="wrap grid items-center gap-12 pb-20 pt-8 md:grid-cols-2 md:pb-32">
             <Reveal>
               <div className="relative aspect-[4/5] overflow-hidden bg-surface"><ProductImage product={spotlight} sizes="(min-width:768px) 45vw, 90vw" /></div>
             </Reveal>
@@ -119,12 +121,12 @@ export default async function Home() {
       )}
 
       {best.length > 0 && (
-        <section className="wrap py-16 md:py-24" aria-labelledby="best-h">
+        <section className="wrap py-20 md:py-28" aria-labelledby="best-h">
           <Reveal>
             <p className="eyebrow text-accent-text">Most loved</p>
             <h2 id="best-h" className="h-section mt-3">Bestsellers</h2>
           </Reveal>
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
+          <div className="stagger mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
             {best.map((p, i) => (
               <Reveal key={p.id} delay={i * 70}><ProductCard product={p} sizes="(min-width:768px) 25vw, 45vw" /></Reveal>
             ))}
@@ -154,9 +156,10 @@ export default async function Home() {
       )}
 
       {settings.testimonials && settings.testimonials.length > 0 && (
-        <section className="wrap py-16 md:py-24" aria-labelledby="voices-h">
+        <section className="wrap py-20 md:py-28" aria-labelledby="voices-h">
+          <div className="section-line mb-14" />
           <h2 id="voices-h" className="h-section">What people say</h2>
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
+          <div className="stagger mt-10 grid gap-8 md:grid-cols-3">
             {settings.testimonials.map((t, i) => (
               <Reveal key={i} delay={i * 80}>
                 <figure className="h-full border-t-2 border-fg pt-5">
@@ -169,8 +172,9 @@ export default async function Home() {
         </section>
       )}
 
-      <section className="wrap py-16 md:py-24">
-        <div className="grid gap-10 border-y hairline py-14 md:grid-cols-2">
+      <section className="wrap py-20 md:py-28">
+        <div className="section-line mb-14" />
+        <div className="grid gap-10 py-6 md:grid-cols-2">
           <Reveal>
             <p className="eyebrow text-accent-text">Teams &amp; events</p>
             <h2 className="h-section mt-3">Bulk &amp; corporate orders</h2>
@@ -186,6 +190,7 @@ export default async function Home() {
             <div className="mt-6"><Newsletter /></div>
           </Reveal>
         </div>
+        <div className="section-line mt-14" />
       </section>
     </>
   );

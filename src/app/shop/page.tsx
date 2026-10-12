@@ -47,11 +47,13 @@ export default async function Shop({ searchParams }: { searchParams: Promise<SP>
   const title = current?.name ?? (tag === "new" ? "New arrivals" : tag === "bestseller" ? "Bestsellers" : tag === "limited" ? "Limited" : "All tees");
 
   return (
-    <div className="wrap pb-10 pt-12 md:pt-16">
+    <div className="wrap pb-16 pt-12 md:pt-20">
       <header className="mb-10 grid gap-4 md:grid-cols-12 md:items-end">
-        <h1 className="h-display text-[clamp(2.8rem,8vw,6rem)] md:col-span-8">{title}</h1>
+        <h1 className="h-display text-[clamp(3.2rem,8.5vw,6.5rem)] md:col-span-8">{title}</h1>
         <p className="lede md:col-span-4">{current?.blurb ?? "Original artwork and photography, finished as wearable pieces."}</p>
       </header>
+
+      <div className="section-line mb-10" />
 
       <Suspense fallback={<div className="skeleton mb-10 h-24" aria-hidden />}>
         <ShopFilters collections={collections} colors={colors} maxPrice={maxPrice} />
@@ -61,11 +63,11 @@ export default async function Shop({ searchParams }: { searchParams: Promise<SP>
 
       {items.length === 0 ? (
         <div className="py-24 text-center">
-          <p className="serif text-5xl">{all.length === 0 ? "The collection is coming soon" : "Nothing matches"}</p>
+          <p className="serif text-5xl text-gradient">{all.length === 0 ? "The collection is coming soon" : "Nothing matches"}</p>
           <p className="mt-3 text-muted">{all.length === 0 ? "Check back shortly." : "Try loosening a filter."}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-12 md:gap-x-6 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="stagger grid grid-cols-2 gap-x-4 gap-y-12 md:gap-x-6 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} sizes="(min-width:1280px) 24vw, (min-width:1024px) 32vw, 48vw" />)}
         </div>
       )}

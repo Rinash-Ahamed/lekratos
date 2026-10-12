@@ -66,9 +66,11 @@ export default async function ProductPage({ params }: Params) {
       <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
       <ProductView product={product} info={{ shipping: settings.shipping, returnsPolicy: settings.returnsPolicy, sizeChart: settings.sizeChart, bulk: settings.bulk }} />
       {related.length > 0 && (
-        <section className="wrap pb-10 pt-6" aria-labelledby="more">
-          <h2 id="more" className="h-section mb-8">You may also like</h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
+        <section className="wrap pb-24 pt-8" aria-labelledby="more">
+          <div className="section-line mb-16" />
+          <p className="eyebrow text-accent-text">Curated recommendations</p>
+          <h2 id="more" className="h-section mb-10 mt-3">You may also like</h2>
+          <div className="stagger grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
             {related.map((p) => <ProductCard key={p.id} product={p} sizes="(min-width:768px) 25vw, 48vw" />)}
           </div>
         </section>

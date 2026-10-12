@@ -2,12 +2,21 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="wrap grid min-h-[60vh] place-items-center py-20 text-center">
+    <div className="wrap grid min-h-[70vh] place-items-center py-24 text-center">
       <div>
-        <p className="eyebrow text-accent-text">404</p>
-        <h1 className="h-display mt-4 text-[clamp(2.6rem,7vw,5rem)]">We can&apos;t find that page</h1>
-        <p className="lede mx-auto mt-4">It may have moved, or the piece may no longer be available.</p>
-        <div className="mt-8 flex justify-center gap-3"><Link href="/shop" className="btn btn-solid">Shop</Link><Link href="/" className="btn btn-ghost">Home</Link></div>
+        <p className="serif text-gradient select-none text-[clamp(7rem,22vw,16rem)] font-bold leading-none tracking-tighter opacity-15">
+          404
+        </p>
+        <h1 className="h-display -mt-10 text-[clamp(2.4rem,6vw,4.5rem)] md:-mt-14">
+          Page not found
+        </h1>
+        <p className="lede mx-auto mt-5">
+          This page may have moved, or the piece is no longer available.
+        </p>
+        <div className="mt-10 flex justify-center gap-4">
+          <Link href="/shop" className="btn btn-solid">Browse shop</Link>
+          <Link href="/" className="btn btn-ghost">Go home</Link>
+        </div>
       </div>
     </div>
   );

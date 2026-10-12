@@ -21,8 +21,10 @@ export function Newsletter() {
     >
       <label htmlFor="nl" className="sr-only">Email address</label>
       <input id="nl" name="email" type="email" required autoComplete="email" placeholder="you@email.com" className="input flex-1" />
-      <button className="btn btn-solid" disabled={state === "busy" || state === "done"}>{state === "done" ? "You're in" : state === "busy" ? "Joining…" : "Join the list"}</button>
-      <p role="status" className="text-sm sm:sr-only">{state === "done" ? "Thanks — you're subscribed." : state === "error" ? "Something went wrong. Please try again." : ""}</p>
+      <button className="btn btn-solid tracking-wide" disabled={state === "busy" || state === "done"}>{state === "done" ? "You're in" : state === "busy" ? "Joining…" : "Join the list"}</button>
+      <p role="status" className={`text-sm transition-all duration-300 ${state === "done" ? "text-accent-text font-medium" : state === "error" ? "text-accent-text" : "text-muted"} sm:sr-only`}>
+        {state === "done" ? "Welcome to the circle — you're subscribed." : state === "error" ? "Something went wrong. Please try again." : ""}
+      </p>
     </form>
   );
 }

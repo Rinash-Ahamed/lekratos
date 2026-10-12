@@ -52,8 +52,8 @@ export function CartDrawer() {
 
   return (
     <>
-      <div className="fade-in fixed inset-0 z-[60] bg-black/50" onClick={() => setCartOpen(false)} aria-hidden />
-      <aside ref={panel} role="dialog" aria-modal="true" aria-label="Shopping bag" className="sheet-in fixed inset-y-0 right-0 z-[61] flex w-full max-w-[460px] flex-col bg-bg text-fg shadow-2xl">
+      <div className="fade-in fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={() => setCartOpen(false)} aria-hidden />
+      <aside ref={panel} role="dialog" aria-modal="true" aria-label="Shopping bag" className="sheet-in fixed inset-y-0 right-0 z-[61] flex w-full max-w-[460px] flex-col glass-heavy text-fg shadow-[0_0_80px_rgba(0,0,0,0.35)] border-l border-line/30">
         <div className="flex items-center justify-between border-b hairline px-6 py-5">
           <h2 className="serif text-3xl">Your bag{cart.length ? ` (${cart.length})` : ""}</h2>
           <button onClick={() => setCartOpen(false)} className="eyebrow link-underline min-h-11 px-1">Close</button>

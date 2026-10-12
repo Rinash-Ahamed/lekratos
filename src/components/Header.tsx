@@ -51,7 +51,8 @@ export function Header() {
   if (pathname.startsWith("/admin")) return null;
 
   return (
-    <header className="sticky top-0 z-50 border-b hairline bg-bg/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 glass border-b border-line/40">
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent-text/15 to-transparent" aria-hidden />
       <div className="wrap flex h-16 items-center justify-between gap-4 md:h-20">
         <Link href="/" aria-label="le.kratos — home" className="shrink-0">
           <BrandMark className="h-7 md:h-9" />
@@ -72,7 +73,7 @@ export function Header() {
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="eyebrow flex min-h-11 items-center gap-2 bg-primary px-4 text-primary-fg"
+            className="eyebrow flex min-h-11 items-center gap-2 rounded-sm bg-primary px-4 text-primary-fg transition-all duration-300"
             aria-label={`Open bag, ${count} item${count === 1 ? "" : "s"}`}
           >
             Bag
@@ -92,10 +93,10 @@ export function Header() {
       </div>
 
       {open && (
-        <div id="mobile-nav" ref={panel} role="dialog" aria-modal="true" aria-label="Menu" className="fade-in fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto bg-bg px-5 pb-10 pt-6 lg:hidden">
+        <div id="mobile-nav" ref={panel} role="dialog" aria-modal="true" aria-label="Menu" className="fade-in fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto glass-heavy px-5 pb-10 pt-6 lg:hidden">
           <nav aria-label="Mobile" className="flex flex-col">
-            {[{ href: "/", label: "Home" }, ...NAV, { href: "/wishlist", label: "Saved" }].map((n) => (
-              <Link key={n.href} href={n.href} className="serif border-b hairline py-4 text-3xl">
+            {[{ href: "/", label: "Home" }, ...NAV, { href: "/wishlist", label: "Saved" }].map((n, i) => (
+              <Link key={n.href} href={n.href} className="serif border-b hairline py-4 text-3xl" style={{ animationDelay: `${i * 50}ms` }}>
                 {n.label}
               </Link>
             ))}

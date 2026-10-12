@@ -17,7 +17,7 @@ export function ProductCard({ product, ratio = "aspect-[4/5]", priority = false,
   const tag = sold ? "Sold out" : product.tags.includes("limited") ? "Limited" : product.tags.includes("new") ? "New" : left > 0 && left <= 5 ? `Only ${left} left` : null;
 
   return (
-    <article className="group relative">
+    <article className="group relative card-3d">
       <Link
         href={`/product/${product.slug}`}
         className="block"
@@ -25,10 +25,13 @@ export function ProductCard({ product, ratio = "aspect-[4/5]", priority = false,
         onPointerLeave={() => setCi(0)}
       >
         <div className={`relative overflow-hidden bg-sunk ${ratio}`}>
-          <div className="absolute inset-0 transition-transform duration-[900ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.04]">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-all duration-500 group-hover:bg-black/[0.06]">
+            <span className="eyebrow translate-y-3 text-fg opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-60">View</span>
+          </div>
+          <div className="absolute inset-0 transition-transform duration-[900ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.06]">
             <ProductImage product={product} colorIndex={ci} priority={priority} sizes={sizes} />
           </div>
-          {tag && <span className={`eyebrow absolute left-3 top-3 px-2.5 py-1.5 ${sold ? "bg-primary text-primary-fg" : "bg-accent text-accent-fg"}`}>{tag}</span>}
+          {tag && <span className={`eyebrow absolute left-3 top-3 rounded-sm px-2.5 py-1.5 ${sold ? "bg-primary text-primary-fg" : "bg-accent text-accent-fg"}`}>{tag}</span>}
         </div>
         <div className="mt-4 flex items-start justify-between gap-4">
           <h3 className="serif text-xl leading-snug md:text-2xl">{product.name}</h3>

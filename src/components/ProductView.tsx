@@ -54,7 +54,7 @@ export function ProductView({ product, info }: { product: Product; info: Info })
       {/* Gallery */}
       <div className="md:col-span-7">
         <div
-          className="relative aspect-[4/5] w-full cursor-zoom-in overflow-hidden bg-sunk"
+          className="relative aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-sm bg-sunk shadow-[0_20px_50px_-20px_rgba(0,0,0,0.15)]"
           onPointerMove={(e) => {
             if (e.pointerType !== "mouse") return;
             const r = e.currentTarget.getBoundingClientRect();
@@ -62,22 +62,22 @@ export function ProductView({ product, info }: { product: Product; info: Info })
           }}
           onPointerLeave={() => setZoom(null)}
         >
-          <div className="absolute inset-0 transition-transform duration-200 ease-out" style={zoom ? { transform: "scale(1.7)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}>
+          <div className="absolute inset-0 transition-transform duration-300 ease-out" style={zoom ? { transform: "scale(1.7)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}>
             <ProductImage product={product} imageIndex={cur.imageIndex} colorIndex={cur.colorIndex} priority sizes="(min-width:768px) 55vw, 100vw" />
           </div>
-          <button type="button" onClick={() => setLightbox(true)} className="eyebrow absolute bottom-3 right-3 min-h-11 bg-bg/90 px-4 backdrop-blur">Enlarge</button>
+          <button type="button" onClick={() => setLightbox(true)} className="eyebrow glass absolute bottom-3 right-3 min-h-11 rounded-sm px-4 shadow-sm transition-all hover:bg-bg">Enlarge</button>
           {frames.length > 1 && (
             <>
-              <button aria-label="Previous image" className="absolute left-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center bg-bg/85 md:hidden" onClick={() => setFrame((frame + frames.length - 1) % frames.length)}>‹</button>
-              <button aria-label="Next image" className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center bg-bg/85 md:hidden" onClick={() => setFrame((frame + 1) % frames.length)}>›</button>
+              <button aria-label="Previous image" className="glass absolute left-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-sm transition-opacity hover:opacity-100 md:hidden" onClick={() => setFrame((frame + frames.length - 1) % frames.length)}>‹</button>
+              <button aria-label="Next image" className="glass absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-sm transition-opacity hover:opacity-100 md:hidden" onClick={() => setFrame((frame + 1) % frames.length)}>›</button>
             </>
           )}
         </div>
         {frames.length > 1 && (
-          <ul className="mt-3 flex gap-2 overflow-x-auto" aria-label="Product images">
+          <ul className="mt-4 flex gap-2.5 overflow-x-auto" aria-label="Product images">
             {frames.map((f, i) => (
               <li key={i}>
-                <button aria-label={`Show image ${i + 1}`} aria-current={frame === i} onClick={() => { setFrame(i); if (!hasPhotos) setCi(i); }} className={`relative block h-20 w-16 overflow-hidden border-2 ${frame === i ? "border-fg" : "border-transparent"}`}>
+                <button aria-label={`Show image ${i + 1}`} aria-current={frame === i} onClick={() => { setFrame(i); if (!hasPhotos) setCi(i); }} className={`relative block h-20 w-16 overflow-hidden rounded-sm border-2 transition-all duration-300 ${frame === i ? "border-fg shadow-sm" : "border-transparent opacity-65 hover:opacity-100"}`}>
                   <ProductImage product={product} imageIndex={f.imageIndex} colorIndex={f.colorIndex} sizes="64px" />
                 </button>
               </li>
@@ -135,8 +135,8 @@ export function ProductView({ product, info }: { product: Product; info: Info })
 
           <div className="mt-3 hidden items-center gap-3 md:flex">
             <Stepper qty={qty} setQty={setQty} max={maxQty} />
-            <button className="btn btn-solid flex-1 !py-4" onClick={addToBag} disabled={soldOut}>{soldOut ? "Sold out" : added ? "Added ✓" : `Add to bag · ${inr(product.price * qty)}`}</button>
-            <WishlistButton productId={product.id} name={product.name} className="border hairline" />
+            <button className="btn btn-solid flex-1 !py-4 shadow-md transition-all duration-300" onClick={addToBag} disabled={soldOut}>{soldOut ? "Sold out" : added ? "Added ✓" : `Add to bag · ${inr(product.price * qty)}`}</button>
+            <WishlistButton productId={product.id} name={product.name} className="border hairline rounded-sm transition-colors hover:border-fg" />
           </div>
 
           <div className="mt-8 divide-y divide-line border-y hairline text-sm">
@@ -154,11 +154,11 @@ export function ProductView({ product, info }: { product: Product; info: Info })
       </div>
 
       {/* Sticky mobile purchase bar */}
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t hairline bg-bg/95 px-3 pt-3 backdrop-blur md:hidden">
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-40 glass-heavy border-t border-line/50 px-4 pt-3.5 pb-3 shadow-[0_-10px_30px_rgba(0,0,0,0.1)] md:hidden">
         <div className="flex items-center gap-2">
           <Stepper qty={qty} setQty={setQty} max={maxQty} compact />
-          <button className="btn btn-solid flex-1 !px-3" onClick={addToBag} disabled={soldOut}>{soldOut ? "Sold out" : added ? "Added ✓" : size ? `Add · ${inr(product.price * qty)}` : "Select size"}</button>
-          <button aria-pressed={saved} aria-label={saved ? "Remove from saved" : "Save"} onClick={() => toggleWish(product.id)} className="grid h-12 w-12 shrink-0 place-items-center border hairline">
+          <button className="btn btn-solid flex-1 !px-3 shadow-sm" onClick={addToBag} disabled={soldOut}>{soldOut ? "Sold out" : added ? "Added ✓" : size ? `Add · ${inr(product.price * qty)}` : "Select size"}</button>
+          <button aria-pressed={saved} aria-label={saved ? "Remove from saved" : "Save"} onClick={() => toggleWish(product.id)} className="grid h-12 w-12 shrink-0 place-items-center rounded-sm border hairline transition-colors hover:border-fg">
             <svg width="20" height="20" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.4 3 5 6.4 5c2 0 3.8 1.1 5.6 3.2C13.8 6.1 15.6 5 17.6 5 21 5 22.9 8.4 21.5 11.7 19.5 16.4 12 21 12 21z" /></svg>
           </button>
         </div>

@@ -7,7 +7,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const { id } = await params;
   const { t } = await searchParams;
   return (
-    <div className="wrap pb-10 pt-12 md:pt-16">
+    <div className="wrap pb-24 pt-12 md:pt-20">
       <OrderStatus id={id} token={t ?? ""} />
     </div>
   );

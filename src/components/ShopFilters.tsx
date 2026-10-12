@@ -32,7 +32,7 @@ export function ShopFilters({
   const active = ["collection", "size", "color", "max", "stock", "tag", "q"].filter((k) => sp.get(k)).length;
 
   const chip = (on: boolean) =>
-    `min-h-10 border px-3.5 py-2 text-sm transition-colors ${on ? "border-fg bg-fg text-bg" : "hairline hover:border-fg"}`;
+    `min-h-10 border px-3.5 py-2 text-sm rounded-sm transition-all duration-300 ${on ? "border-fg bg-fg text-bg shadow-sm" : "hairline hover:border-fg hover:bg-fg/5"}`;
 
   return (
     <div className="mb-10">
@@ -65,7 +65,7 @@ export function ShopFilters({
         <input id="shop-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search designs" className="input sm:max-w-sm" />
         <button className="btn btn-ghost" type="submit">Search</button>
         <label htmlFor="shop-sort" className="sr-only">Sort</label>
-        <select id="shop-sort" className="input sm:ml-auto sm:max-w-[14rem]" value={get("sort")} onChange={(e) => set("sort", e.target.value)}>
+        <select id="shop-sort" className="input cursor-pointer sm:ml-auto sm:max-w-[14rem]" value={get("sort")} onChange={(e) => set("sort", e.target.value)}>
           <option value="">Newest</option>
           <option value="price-asc">Price: low to high</option>
           <option value="price-desc">Price: high to low</option>
@@ -74,7 +74,7 @@ export function ShopFilters({
 
       <div
         id="filters"
-        className={`${open ? "grid" : "hidden"} mt-6 gap-8 border-y hairline py-8 md:grid md:grid-cols-4`}
+        className={`${open ? "grid" : "hidden"} mt-6 gap-8 rounded-sm glass border border-line/40 p-6 md:grid md:grid-cols-4`}
         aria-busy={pending}
       >
         <fieldset className="md:hidden">
@@ -109,7 +109,7 @@ export function ShopFilters({
                 aria-pressed={get("color") === c.name}
                 title={c.name}
                 onClick={() => set("color", c.name)}
-                className={`h-8 w-8 rounded-full border-2 ${get("color") === c.name ? "border-fg" : "border-transparent"} p-0.5`}
+                className={`h-8 w-8 rounded-full border-2 transition-all duration-300 ${get("color") === c.name ? "border-fg scale-110 shadow-sm" : "border-transparent opacity-75 hover:opacity-100"} p-0.5`}
               >
                 <span className="block h-full w-full rounded-full border border-black/20" style={{ background: c.hex }} />
               </button>

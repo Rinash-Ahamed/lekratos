@@ -1,23 +1,29 @@
 # Deployment checklist
 
 ## 1. Firebase
-1. Create a project; enable **Firestore** (native mode) and **Storage**.
-2. `firebase deploy --only firestore:rules,firestore:indexes,storage` — rules deny **all** client access; only the server (Admin SDK) reads/writes.
-3. Add TTL policies on `rateLimits.expiresAt`, `webhookEvents.expiresAt`, `adminSessions.expiresAt` (Firestore → Time-to-live).
-4. Create a service account (Firestore + Storage access) and set the `FIREBASE_*` variables from `.env.example`.
-5. Optional migration of v1 data: `npm run migrate` (dry run) then `npm run migrate -- --apply`. It only creates missing documents.
 
-## 2. Razorpay
-1. Put live/test `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in the host secrets.
-2. Webhook → `https://YOUR-SITE/api/razorpay/webhook`, events `payment.captured`, `order.paid`, `payment.failed`, `refund.processed`; copy its secret to `RAZORPAY_WEBHOOK_SECRET`.
-3. **Run a real sandbox payment end-to-end before launch** (the automated tests use a local fake of the Razorpay API, not Razorpay itself).
+1. Create a project; enable Firestore (native mode) and Storage.
+2. Deploy `firestore:rules`, `firestore:indexes`, and `storage`. Rules deny client access; only the server Admin SDK reads or writes.
+3. Add TTL policies on `rateLimits.expiresAt` and `adminSessions.expiresAt`.
+4. Create a service account with Firestore and Storage access and configure the `FIREBASE_*` variables.
+5. Optional v1 migration: run `npm run migrate` as a dry run, then `npm run migrate -- --apply`.
 
-## 3. Admin & housekeeping
-- `npm run admin:hash` → `ADMIN_PASSWORD_HASH`; `ADMIN_SESSION_SECRET` ≥ 32 random chars.
-- Schedule `GET /api/cron/sweep` every ~5 minutes with `Authorization: Bearer $CRON_SECRET` (e.g. Vercel Cron) so abandoned checkouts release stock.
+## 2. Manual UPI payment
 
-## 4. Go-live
-- Open Admin → Overview and clear every **required** item on the launch checklist.
-- Fill Settings (business name, contact, shipping, returns/privacy/terms, size chart, brand story) and tick “policies reviewed” only after a legal review.
-- Delete the Sample products; upload real photography.
-- Set `NEXT_PUBLIC_SITE_URL`; submit `/sitemap.xml` to Search Console.
+1. In Admin → Settings → UPI payment, enter the receiving UPI ID and payee name, then upload the live QR code.
+2. Make a small real payment and confirm that its reference and optional screenshot appear in Admin → Orders.
+3. Verify that an order stays unconfirmed until an administrator checks the receiving account and selects **Verify payment**.
+4. Test rejection, reservation expiry, duplicate references, and the stock-unavailable manual-review path before launch.
+
+## 3. Admin and housekeeping
+
+- Generate `ADMIN_PASSWORD_HASH` with `npm run admin:hash`; use an `ADMIN_SESSION_SECRET` of at least 32 random characters.
+- Set `CRON_SECRET` and schedule `GET /api/cron/sweep` approximately every five minutes so abandoned checkouts release stock.
+- Limit access to payment screenshots to trusted administrators and define a retention policy.
+
+## 4. Go live
+
+- Clear every required item in Admin → Overview.
+- Complete business, contact, shipping, UPI, policy, size chart, and brand-story settings.
+- Remove sample products and publish real products with accurate imagery and stock.
+- Set `NEXT_PUBLIC_SITE_URL` and submit `/sitemap.xml` to Search Console.

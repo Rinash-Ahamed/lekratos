@@ -18,9 +18,17 @@ export function Header() {
   const { count, wishlist, setCartOpen } = useStore();
   const pathname = usePathname();
   const [openAt, setOpenAt] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const open = openAt === pathname;
   const menuBtn = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 28);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +53,7 @@ export function Header() {
   if (pathname.startsWith("/admin")) return null;
 
   return (
-    <header className="site-header">
+    <header className={`site-header${scrolled ? " is-scrolled" : ""}`}>
       <div className="site-nav-shell">
         <Link href="/" aria-label="le.kratos — home" className="site-logo"><BrandMark className="h-6 md:h-7" /></Link>
         <nav aria-label="Primary" className="site-desktop-nav">

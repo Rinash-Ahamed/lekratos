@@ -5,16 +5,11 @@ import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * E2E runs the PRODUCTION build (`next start`) against a throw-away JSON data dir and a LOCAL fake of Razorpay's
- * REST API (tests/support/fake-razorpay.ts, port 4010). It is not Razorpay's sandbox.
+ * E2E runs the production build (`next start`) against a throw-away JSON data directory.
  */
 export const E2E = {
   port: 3100,
-  gateway: 4010,
   password: "e2e-admin-password-123",
-  keyId: "rzp_test_e2e",
-  keySecret: "e2e_key_secret",
-  webhookSecret: "e2e_webhook_secret",
 };
 
 const N = 16384;
@@ -23,6 +18,11 @@ const hash = crypto.scryptSync(E2E.password, salt, 32, { N, r: 8, p: 1, maxmem: 
 // next start persists unstable_cache entries in .next/cache; clear them so a run never sees another run's catalog
 if (!process.env.TEST_WORKER_INDEX) fs.rmSync(path.join(process.cwd(), ".next", "cache"), { recursive: true, force: true });
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "lk-e2e-"));
+fs.writeFileSync(path.join(dataDir, "settings.json"), JSON.stringify({ store: {
+  shipping: { flatRate: 0 },
+  payment: { upiId: "lekratos@upi", payeeName: "LE.KRATOS", qrImage: "/tees/WhatsApp Image 2026-11-08 at 5.17.32 PM.jpeg", reservationMinutes: 20 },
+  bulk: {},
+} }, null, 2));
 const chromium = process.env.CHROMIUM_PATH ?? (fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 
 export default defineConfig({
@@ -50,10 +50,6 @@ export default defineConfig({
       JSON_DATA_DIR: dataDir,
       ADMIN_SESSION_SECRET: "e2e-session-secret-0123456789abcdef0123456789",
       ADMIN_PASSWORD_HASH: `scrypt:${N}:8:1:${salt.toString("base64")}:${hash.toString("base64")}`,
-      RAZORPAY_KEY_ID: E2E.keyId,
-      RAZORPAY_KEY_SECRET: E2E.keySecret,
-      RAZORPAY_WEBHOOK_SECRET: E2E.webhookSecret,
-      RAZORPAY_API_BASE: `http://127.0.0.1:${E2E.gateway}`,
       NEXT_PUBLIC_SITE_URL: `http://localhost:${E2E.port}`,
     },
   },

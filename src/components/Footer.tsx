@@ -45,7 +45,7 @@ export async function Footer() {
         <div className="footer-wordmark" aria-label="le.kratos">LE.KRATOS</div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} le.kratos{settings?.legalName ? ` · ${settings.legalName}` : ""}</span>
-          <span>Secure checkout by Razorpay</span>
+          <span>Manual UPI · Human verified</span>
           <span><Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></span>
         </div>
       </footer>

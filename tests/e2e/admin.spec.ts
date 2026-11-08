@@ -1,5 +1,5 @@
 import { E2E } from "../../playwright.config";
-import { test, expect, fake, stubCheckout, addFirstProduct, fillCheckout } from "./fixtures";
+import { test, expect, addFirstProduct, fillCheckout } from "./fixtures";
 import sharp from "sharp";
 
 test.describe.configure({ mode: "serial" });
@@ -70,12 +70,13 @@ test("settings feed the storefront (contact page) and delete asks for confirmati
   await expect(page.getByRole("cell", { name: /E2E Test Tee/ })).toBeVisible();
 });
 
-test("order lifecycle: customer pays, admin fulfils, exports CSV and refunds", async ({ page }) => {
-  await stubCheckout(page, { mode: "pay" });
+test("order lifecycle: customer submits UPI reference, admin verifies, fulfils and exports CSV", async ({ page }) => {
   await addFirstProduct(page);
   await fillCheckout(page);
-  await page.getByRole("button", { name: /^Pay / }).click();
-  await expect(page.getByRole("heading", { name: "Thank you." })).toBeVisible();
+  await page.getByRole("button", { name: /^Continue to UPI/ }).click();
+  await page.getByLabel("UPI transaction/reference ID").fill("431209876599");
+  await page.getByRole("button", { name: "Submit for verification" }).click();
+  await expect(page.getByRole("heading", { name: "We received your payment details." })).toBeVisible();
   const orderId = (await page.locator("strong.select-all").textContent())!;
 
   const admin = await page.context().newPage();
@@ -85,6 +86,9 @@ test("order lifecycle: customer pays, admin fulfils, exports CSV and refunds", a
   await admin.getByRole("button", { name: "Orders" }).click();
   await admin.getByRole("searchbox", { name: "Search orders" }).fill(orderId);
   await admin.getByRole("row", { name: new RegExp(orderId) }).getByRole("button", { name: "Open" }).click();
+  await admin.getByRole("button", { name: "Verify payment" }).click();
+  await admin.getByRole("dialog", { name: "Verify this payment?" }).getByRole("button", { name: "Verify payment" }).click();
+  await expect(admin.getByText("Payment verified")).toBeVisible();
   await admin.getByRole("button", { name: "Mark packed" }).click();
   await expect(admin.getByText("Marked packed")).toBeVisible();
 
@@ -92,13 +96,6 @@ test("order lifecycle: customer pays, admin fulfils, exports CSV and refunds", a
   const [dl] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Export CSV" }).click()]);
   expect(dl.suggestedFilename()).toMatch(/orders.*\.csv$/);
   expect(await (await import("node:fs/promises")).readFile((await dl.path())!, "utf8")).toContain(orderId);
-
-  await admin.getByRole("row", { name: new RegExp(orderId) }).getByRole("button", { name: "Open" }).click();
-  const before = fake.refunds.length;
-  await admin.getByRole("button", { name: "Refund via Razorpay" }).click();
-  await admin.getByRole("dialog", { name: "Issue refund?" }).getByRole("button", { name: "Refund" }).click();
-  await expect(admin.getByText("Refund issued")).toBeVisible();
-  expect(fake.refunds.length).toBe(before + 1);
 });
 
 test("sign out ends the session", async ({ page }) => {

@@ -17,12 +17,11 @@ export async function readiness(): Promise<Check[]> {
   const products = await db.products.all();
   const real = products.filter((p) => !p.sample);
   const a = env.admin();
-  const rz = env.razorpay();
   return [
     { key: "backend", label: "Production database (Firestore)", ok: env.dataBackend() === "firestore", level: "required", hint: "Set DATA_BACKEND=firestore and the FIREBASE_* credentials." },
     { key: "storage", label: "Cloud image storage", ok: !!env.storageBucket() && env.dataBackend() === "firestore", level: "required", hint: "Set FIREBASE_STORAGE_BUCKET." },
-    { key: "razorpay", label: "Razorpay API keys", ok: !!rz, level: "required", hint: "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET." },
-    { key: "webhook", label: "Razorpay webhook secret", ok: !!rz?.webhookSecret, level: "required", hint: "Create a webhook → /api/razorpay/webhook, set RAZORPAY_WEBHOOK_SECRET." },
+    { key: "upi", label: "UPI receiving details", ok: !!s.payment.upiId && !!s.payment.payeeName, level: "required", hint: "Store settings → UPI payment: add the UPI ID and payee name." },
+    { key: "paymentqr", label: "Payment QR code", ok: !!s.payment.qrImage, level: "required", hint: "Store settings → UPI payment: upload the live receiving QR code." },
     { key: "adminhash", label: "Hashed admin password", ok: !!a.passwordHash && adminConfigured(), level: "required", hint: "Run `npm run admin:hash` and set ADMIN_PASSWORD_HASH + a 32+ char ADMIN_SESSION_SECRET." },
     { key: "cron", label: "Scheduled stock-hold sweep", ok: !!env.cronSecret(), level: "recommended", hint: "Set CRON_SECRET and call /api/cron/sweep every ~5 minutes." },
     { key: "siteurl", label: "Public site URL", ok: !!process.env.NEXT_PUBLIC_SITE_URL, level: "required", hint: "Set NEXT_PUBLIC_SITE_URL (used for canonical URLs, sitemap, Open Graph)." },

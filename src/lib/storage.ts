@@ -60,6 +60,9 @@ function guardLocalInProd() {
 export async function saveProductImage(file: File): Promise<string> {
   return storeProductImage(await sanitizeImage(file, PRODUCT_IMAGE_MAX_BYTES));
 }
+export async function savePaymentQrImage(file: File): Promise<string> {
+  return storeProductImage(await sanitizeImage(file, ATTACHMENT_MAX_BYTES));
+}
 export async function saveProductImageBuffer(buf: Buffer): Promise<string> {
   return storeProductImage(await sanitizeBuffer(buf));
 }
@@ -85,14 +88,18 @@ async function storeProductImage(data: Buffer): Promise<string> {
 
 /** Saves a private customer attachment; returns an opaque storage key (never a URL). */
 export async function savePrivateAttachment(file: File): Promise<string> {
-  return storePrivate(await sanitizeImage(file, ATTACHMENT_MAX_BYTES));
+  return storePrivate(await sanitizeImage(file, ATTACHMENT_MAX_BYTES), "enquiries");
 }
 export async function savePrivateAttachmentBuffer(buf: Buffer): Promise<string> {
-  return storePrivate(await sanitizeBuffer(buf));
+  return storePrivate(await sanitizeBuffer(buf), "enquiries");
 }
 
-async function storePrivate(data: Buffer): Promise<string> {
-  const key = `enquiries/${Date.now()}-${randomToken(9)}.webp`;
+export async function savePaymentScreenshot(file: File): Promise<string> {
+  return storePrivate(await sanitizeImage(file, ATTACHMENT_MAX_BYTES), "payments");
+}
+
+async function storePrivate(data: Buffer, area: "enquiries" | "payments"): Promise<string> {
+  const key = `${area}/${Date.now()}-${randomToken(9)}.webp`;
   if (firebaseEnabled()) {
     await bucket().file(key).save(data, { contentType: "image/webp", resumable: false, private: true });
     return key;
@@ -104,7 +111,7 @@ async function storePrivate(data: Buffer): Promise<string> {
   return key;
 }
 
-const KEY_RE = /^enquiries\/[0-9]+-[A-Za-z0-9_-]+\.webp$/;
+const KEY_RE = /^(enquiries|payments)\/[0-9]+-[A-Za-z0-9_-]+\.webp$/;
 
 /** Admin-only read. Returns either a short-lived signed URL (cloud) or the bytes (local). */
 export async function readPrivateAttachment(key: string): Promise<{ url: string } | { bytes: Buffer }> {

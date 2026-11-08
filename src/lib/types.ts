@@ -23,9 +23,11 @@ export type ArtKind = "sun" | "grid" | "wave" | "eye" | "bloom" | "stripe";
 
 export interface Product {
   id: string;
+  sku?: string;
   slug: string;
   name: string;
   collection: string; // Collection.slug
+  categories?: string[];
   price: number; // INR, whole rupees
   compareAt?: number;
   description: string;
@@ -42,6 +44,9 @@ export interface Product {
   art: { kind: ArtKind; seed: number };
   tags: ("new" | "bestseller" | "limited" | "trending")[];
   featured?: boolean;
+  displayOrder?: number;
+  manualSoldOut?: boolean;
+  status?: "active" | "draft" | "archived" | "sold_out";
   /** true on bundled demo records, so they are clearly labelled and easy to delete */
   sample?: boolean;
   createdAt: string;
@@ -51,7 +56,7 @@ export interface Product {
 
 /**
  * pending   – stock reserved, waiting for payment
- * paid      – payment captured & verified with the gateway
+ * confirmed – manual UPI payment verified by an administrator
  * packed / shipped / delivered – fulfilment
  * cancelled – cancelled by admin (stock released)
  * expired   – reservation lapsed without payment (stock released)
@@ -61,6 +66,9 @@ export interface Product {
  */
 export type OrderStatus =
   | "pending"
+  | "payment_pending"
+  | "payment_rejected"
+  | "confirmed"
   | "paid"
   | "packed"
   | "shipped"
@@ -71,7 +79,16 @@ export type OrderStatus =
   | "refunded"
   | "review";
 
-export const PAID_STATUSES: OrderStatus[] = ["paid", "packed", "shipped", "delivered"];
+export const PAID_STATUSES: OrderStatus[] = ["confirmed", "paid", "packed", "shipped", "delivered"];
+
+export type PaymentStatus = "awaiting_submission" | "verification_pending" | "verified" | "rejected";
+
+export interface PaymentVerificationEvent {
+  at: string;
+  action: "submitted" | "verified" | "rejected" | "expired" | "stock_unavailable";
+  by: string;
+  note?: string;
+}
 
 export interface OrderItem {
   productId: string;
@@ -121,6 +138,14 @@ export interface Order {
   tokenHash?: string;
   reservedUntil?: string;
   stockReserved?: boolean;
+  paymentStatus?: PaymentStatus;
+  paymentReference?: string;
+  paymentScreenshotKey?: string;
+  paymentSubmittedAt?: string;
+  paymentVerifiedAt?: string;
+  paymentVerifiedBy?: string;
+  paymentRejectionReason?: string;
+  paymentVerificationHistory?: PaymentVerificationEvent[];
   payment?: { amountPaise: number; currency: string; method?: string; capturedAt?: string };
   refunds?: Refund[];
   refundedTotal?: number;
@@ -190,6 +215,13 @@ export interface StoreSettings {
     dispatchTime?: string;
     deliveryTime?: string;
     coverage?: string;
+  };
+  payment: {
+    upiId?: string;
+    payeeName?: string;
+    qrImage?: string;
+    instructions?: string;
+    reservationMinutes?: number;
   };
   returnsPolicy?: string;
   privacyPolicy?: string;

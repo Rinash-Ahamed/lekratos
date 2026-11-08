@@ -15,11 +15,10 @@ import { PAID_STATUSES, type Order, type OrderItem, type OrderStatus, type Produ
  * transaction so concurrent buyers can never oversell and webhooks can safely retry.
  *
  *   createPendingOrder ── reserves stock, order = pending (reservedUntil = now + N min)
- *   attachGatewayOrder ── stores the Razorpay order id
- *   markPaid           ── idempotent; only called with gateway-verified payment data
- *   releaseReservation ── pending → expired/failed, stock returned
- *   refundOrder        ── gateway refund, then ledger entry (+ optional restock)
- *   sweepExpired       ── reconcile with the gateway, then release lapsed reservations
+ *   submitManualPayment ── records customer evidence, never marks paid
+ *   verifyManualPayment ── admin verification + atomic stock allocation
+ *   releaseReservation  ── pending → expired/failed, stock returned
+ *   sweepExpired        ── releases lapsed reservations
  */
 
 export class OrderError extends Error {
@@ -95,7 +94,9 @@ export async function createPendingOrder(input: CreateInput): Promise<{ order: O
   const { priced, checkoutKey } = input;
   const id = orderIdFromKey(checkoutKey);
   const token = randomToken();
-  const reservedUntil = new Date(Date.now() + env.reservationMinutes() * 60_000).toISOString();
+  const settings = await db.settings.get();
+  const holdMinutes = settings.payment.reservationMinutes ?? env.reservationMinutes();
+  const reservedUntil = new Date(Date.now() + holdMinutes * 60_000).toISOString();
 
   const result = await getDb().tx(async (tx) => {
     const existing = await tx.get<Order>("orders", id);
@@ -111,7 +112,7 @@ export async function createPendingOrder(input: CreateInput): Promise<{ order: O
       if (PAID_STATUSES.includes(ex.status)) throw new OrderError("INVALID_STATE", "This order has already been paid.");
       if (ex.status !== "pending") throw new OrderError("INVALID_STATE", "This checkout has ended. Please start again.");
       // idempotent re-submit: keep the reservation, rotate the access token
-      const next: Order = { ...ex, tokenHash: sha256(token), customer: input.customer, address: input.address, updatedAt: now() };
+      const next: Order = { ...ex, tokenHash: sha256(token), customer: input.customer, address: input.address, reservedUntil, updatedAt: now() };
       tx.set("orders", id, next);
       return { order: next, reused: true };
     }
@@ -119,7 +120,8 @@ export async function createPendingOrder(input: CreateInput): Promise<{ order: O
     // authoritative price + stock re-check against the live documents
     for (const it of priced.items) {
       const p = products.get(it.productId);
-      if (!p || !p.published) throw new OrderError("OUT_OF_STOCK", `${it.name} is no longer available`);
+      if (!p || !p.published || p.manualSoldOut || p.status === "draft" || p.status === "archived" || p.status === "sold_out")
+        throw new OrderError("OUT_OF_STOCK", `${it.name} is no longer available`);
       if (p.price !== it.price) throw new OrderError("PRICE_CHANGED", `The price of ${p.name} just changed. Please review your bag.`);
     }
     const short = applyStock(products, priced.items, -1);
@@ -143,6 +145,7 @@ export async function createPendingOrder(input: CreateInput): Promise<{ order: O
       tokenHash: sha256(token),
       reservedUntil,
       stockReserved: true,
+      paymentStatus: "awaiting_submission",
       events: [{ at: now(), type: "created", note: "stock reserved" }],
     };
     for (const p of products.values()) tx.set("products", p.id, p);
@@ -152,6 +155,109 @@ export async function createPendingOrder(input: CreateInput): Promise<{ order: O
 
   bustCatalog();
   return { ...result, token };
+}
+
+/* ------------------------------------------------------- manual UPI flow */
+
+const verificationHistory = (
+  o: Order,
+  action: NonNullable<Order["paymentVerificationHistory"]>[number]["action"],
+  by: string,
+  note?: string,
+) => [...(o.paymentVerificationHistory ?? []), { at: now(), action, by, note }].slice(-40);
+
+/** Records customer-supplied payment details. This NEVER marks an order paid. */
+export async function submitManualPayment(
+  orderId: string,
+  reference: string,
+  screenshotKey?: string,
+): Promise<Order> {
+  const normalized = reference.trim().toUpperCase().replace(/\s+/g, "");
+  const refKey = sha256(`upi:${normalized}`);
+  return getDb().tx(async (tx) => {
+    const raw = await tx.get<Order>("orders", orderId);
+    const claimed = await tx.get<{ orderId: string; reference: string }>("paymentReferences", refKey);
+    if (!raw) throw new OrderError("NOT_FOUND", "Order not found");
+    const o = normalize(raw);
+    if (claimed && claimed.orderId !== orderId) throw new OrderError("INVALID_STATE", "That transaction reference has already been submitted for another order");
+    if (!["pending", "payment_pending", "payment_rejected", "expired"].includes(o.status))
+      throw new OrderError("INVALID_STATE", "Payment details can no longer be submitted for this order");
+    const next: Order = {
+      ...o,
+      status: "payment_pending",
+      paid: false,
+      paymentStatus: "verification_pending",
+      paymentReference: normalized,
+      paymentScreenshotKey: screenshotKey ?? o.paymentScreenshotKey,
+      paymentSubmittedAt: now(),
+      paymentRejectionReason: undefined,
+      paymentVerificationHistory: verificationHistory(o, "submitted", "customer", normalized.slice(-8)),
+      events: withEvent(o, "payment_submitted", normalized.slice(-8)),
+      updatedAt: now(),
+    };
+    tx.set("paymentReferences", refKey, { orderId, reference: normalized, at: now() });
+    tx.set("orders", orderId, next);
+    return next;
+  });
+}
+
+/** Admin-only bank-confirmed verification. Stock is atomically re-reserved when a hold already lapsed. */
+export async function verifyManualPayment(orderId: string, by: string, note?: string): Promise<Order> {
+  const out = await getDb().tx(async (tx) => {
+    const raw = await tx.get<Order>("orders", orderId);
+    if (!raw) throw new OrderError("NOT_FOUND", "Order not found");
+    const o = normalize(raw);
+    if (o.paymentStatus !== "verification_pending" || !o.paymentReference)
+      throw new OrderError("INVALID_STATE", "This order has no payment awaiting verification");
+    const products = o.stockReserved ? new Map<string, Product>() : await readProducts(tx, o.items.map((i) => i.productId));
+    const short = o.stockReserved ? null : applyStock(products, o.items, -1);
+    const canConfirm = !short && o.status !== "cancelled";
+    const next: Order = {
+      ...o,
+      paid: true,
+      paymentStatus: "verified",
+      paymentVerifiedAt: now(),
+      paymentVerifiedBy: by,
+      status: canConfirm ? "confirmed" : "review",
+      stockReserved: canConfirm ? true : o.stockReserved,
+      payment: { amountPaise: o.total * 100, currency: "INR", method: "manual_upi", capturedAt: now() },
+      paymentVerificationHistory: verificationHistory(o, canConfirm ? "verified" : "stock_unavailable", by, note),
+      events: withEvent(o, canConfirm ? "payment_verified" : "payment_verified_stock_unavailable", note),
+      updatedAt: now(),
+    };
+    if (canConfirm && !o.stockReserved) for (const product of products.values()) tx.set("products", product.id, product);
+    tx.set("orders", orderId, next);
+    return { order: next, stockChanged: canConfirm && !o.stockReserved };
+  });
+  if (out.stockChanged) bustCatalog();
+  return out.order;
+}
+
+export async function rejectManualPayment(orderId: string, by: string, reason: string): Promise<Order> {
+  const out = await getDb().tx(async (tx) => {
+    const raw = await tx.get<Order>("orders", orderId);
+    if (!raw) throw new OrderError("NOT_FOUND", "Order not found");
+    const o = normalize(raw);
+    if (o.paymentStatus !== "verification_pending") throw new OrderError("INVALID_STATE", "This payment is not awaiting verification");
+    const products = o.stockReserved ? await readProducts(tx, o.items.map((i) => i.productId)) : new Map<string, Product>();
+    if (o.stockReserved) applyStock(products, o.items, 1);
+    const next: Order = {
+      ...o,
+      paid: false,
+      status: "payment_rejected",
+      paymentStatus: "rejected",
+      stockReserved: false,
+      paymentRejectionReason: reason,
+      paymentVerificationHistory: verificationHistory(o, "rejected", by, reason),
+      events: withEvent(o, "payment_rejected", reason),
+      updatedAt: now(),
+    };
+    for (const product of products.values()) tx.set("products", product.id, product);
+    tx.set("orders", orderId, next);
+    return { order: next, stockChanged: o.stockReserved };
+  });
+  if (out.stockChanged) bustCatalog();
+  return out.order;
 }
 
 /** Stores the gateway order id. No-op unless the order is still pending. */
@@ -294,10 +400,18 @@ export async function releaseReservation(orderId: string, to: "expired" | "faile
     const raw = await tx.get<Order>("orders", orderId);
     if (!raw) throw new OrderError("NOT_FOUND", "Order not found");
     const o = normalize(raw);
-    if (o.status !== "pending") return { order: o, released: false }; // paid in the meantime, or already released
+    if (o.status !== "pending" && o.status !== "payment_pending") return { order: o, released: false }; // verified in the meantime, or already released
     const products = o.stockReserved ? await readProducts(tx, o.items.map((i) => i.productId)) : new Map<string, Product>();
     if (o.stockReserved) applyStock(products, o.items, 1);
-    const next: Order = { ...o, status: to, stockReserved: false, events: withEvent(o, to, note), updatedAt: now() };
+    const submitted = o.paymentStatus === "verification_pending";
+    const next: Order = {
+      ...o,
+      status: submitted ? "review" : to,
+      stockReserved: false,
+      paymentVerificationHistory: submitted ? verificationHistory(o, "expired", "system", "stock hold expired while payment awaited verification") : o.paymentVerificationHistory,
+      events: withEvent(o, submitted ? "payment_pending_hold_expired" : to, note),
+      updatedAt: now(),
+    };
     for (const p of products.values()) tx.set("products", p.id, p);
     tx.set("orders", orderId, next);
     return { order: next, released: true };
@@ -306,20 +420,9 @@ export async function releaseReservation(orderId: string, to: "expired" | "faile
   return out.order;
 }
 
-/**
- * Reconciles ONE lapsed pending order: if the gateway shows a captured payment we settle it,
- * otherwise the stock is released. Gateway errors leave the order untouched (retried next sweep).
- */
+/** Reconciles one lapsed reservation by releasing stock; submitted evidence remains reviewable. */
 export async function reconcileExpired(o: Order): Promise<"paid" | "released" | "skipped"> {
   try {
-    if (o.razorpayOrderId && env.razorpay()) {
-      const payments = await gateway.fetchOrderPayments(o.razorpayOrderId);
-      const cap = payments.find((p) => p.status === "captured" && p.amount === o.total * 100 && p.currency === "INR");
-      if (cap) {
-        await markPaid(o.id, { id: cap.id, amountPaise: cap.amount, currency: cap.currency, method: cap.method });
-        return "paid";
-      }
-    }
     await releaseReservation(o.id, "expired", "reservation lapsed");
     return "released";
   } catch (e) {
@@ -402,7 +505,7 @@ export async function openGatewayOrder(order: Order): Promise<Order> {
 
 /* ------------------------------------------------------------- admin ops */
 
-const FULFIL: OrderStatus[] = ["paid", "packed", "shipped", "delivered"];
+const FULFIL: OrderStatus[] = ["confirmed", "paid", "packed", "shipped", "delivered"];
 
 export async function setFulfilment(orderId: string, status: OrderStatus, by: string, trackingNote?: string): Promise<Order> {
   return getDb().tx(async (tx) => {
@@ -426,7 +529,7 @@ export async function setFulfilment(orderId: string, status: OrderStatus, by: st
 export async function cancelUnpaid(orderId: string, by: string): Promise<Order> {
   const o = await db.orders.byId(orderId);
   if (!o) throw new OrderError("NOT_FOUND", "Order not found");
-  if (o.status !== "pending") throw new OrderError("INVALID_STATE", "Only unpaid orders can be cancelled here. Paid orders are cancelled by refunding them.");
+  if (o.status !== "pending") throw new OrderError("INVALID_STATE", "Only orders without submitted payment details can be cancelled here.");
   return releaseReservation(orderId, "cancelled", `by ${by}`);
 }
 
@@ -485,6 +588,9 @@ export function publicOrderView(o: Order) {
     id: o.id,
     status: o.status,
     paid: o.paid,
+    paymentStatus: o.paymentStatus ?? (o.paid ? "verified" : "awaiting_submission"),
+    paymentReference: o.paymentReference ? `••••${o.paymentReference.slice(-6)}` : undefined,
+    paymentRejectionReason: o.paymentRejectionReason,
     total: o.total,
     subtotal: o.subtotal,
     shipping: o.shipping,
@@ -493,7 +599,7 @@ export function publicOrderView(o: Order) {
     createdAt: o.createdAt,
     reservedUntil: o.reservedUntil,
     trackingNote: o.trackingNote,
-    retryable: o.status === "pending" || o.status === "expired" || o.status === "failed",
+    retryable: false,
   };
 }
 

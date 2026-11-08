@@ -25,6 +25,14 @@ function variants(colors: string[], stock: Partial<Record<Size, number>>): Varia
 }
 
 const iso = (daysAgo: number) => new Date(Date.UTC(2026, 8, 30 - daysAgo)).toISOString();
+const SAMPLE_IMAGES = [
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.32 PM.jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM.jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (1).jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (2).jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (3).jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.34 PM.jpeg",
+];
 
 function sample(
   n: number,
@@ -47,7 +55,7 @@ function sample(
     story: "Sample product — replace with your own design, description and photography.",
     colors: colors.map((c) => COLORS[c]),
     variants: variants(colors.map((c) => COLORS[c].name), stock),
-    images: [],
+    images: [SAMPLE_IMAGES[(n - 1) % SAMPLE_IMAGES.length]],
     art: { kind, seed: n * 7 + 3 },
     tags,
     featured,

@@ -7,8 +7,9 @@ export default function Checkout() {
   return (
     <div className="wrap pb-20 pt-12 md:pt-20">
       <header className="mb-12">
-        <p className="eyebrow text-accent-text">Secure purchase</p>
+        <p className="eyebrow text-accent-text">Manual UPI · Verified by our team</p>
         <h1 className="h-display mt-3 text-[clamp(2.8rem,7vw,5.2rem)]">Checkout</h1>
+        <p className="lede mt-4 max-w-2xl">Review every detail, pay the exact amount by QR, then submit your transaction reference for verification.</p>
       </header>
       <CheckoutForm />
     </div>

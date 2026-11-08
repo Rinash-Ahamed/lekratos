@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { Banner, Product } from "@/lib/types";
@@ -127,6 +128,7 @@ export function Hero({ banner, product }: { banner?: Banner; product?: Product }
   const sub = banner?.sub || "Independent artwork. Limited releases. Made to be worn your way.";
   const cta = banner?.cta || "Explore the collection";
   const href = banner?.href || "/shop";
+  const featuredImage = product?.images?.[0] || "/tees/WhatsApp Image 2026-11-08 at 5.17.32 PM.jpeg";
 
   return (
     <section className="fluid-hero" aria-labelledby="hero-title">
@@ -135,6 +137,11 @@ export function Hero({ banner, product }: { banner?: Banner; product?: Product }
       <div className="hero-grid" aria-hidden="true" />
       <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
       <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
+      <div className="hero-fashion-stage" aria-label="Featured LE.KRATOS pieces">
+        <div className="hero-garment hero-garment-left"><Image src="/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (2).jpeg" alt="LE.KRATOS burgundy sleeveless piece" fill sizes="(max-width: 700px) 32vw, 18vw" /></div>
+        <div className="hero-garment hero-garment-main"><Image src={featuredImage} alt={product?.name || "LE.KRATOS graphic T-shirt"} fill priority sizes="(max-width: 700px) 68vw, 34vw" /></div>
+        <div className="hero-garment hero-garment-right"><Image src="/tees/WhatsApp Image 2026-11-08 at 5.17.34 PM.jpeg" alt="LE.KRATOS olive T-shirt" fill sizes="(max-width: 700px) 32vw, 18vw" /></div>
+      </div>
       <div className="hero-copy">
         <p className="hero-kicker"><span>Independent label</span><span>India / Worldwide</span></p>
         <h1 id="hero-title"><span>{lineOne}</span>{lineTwo && <span className="hero-line-two">{lineTwo}</span>}</h1>

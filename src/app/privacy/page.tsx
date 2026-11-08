@@ -14,7 +14,7 @@ export default async function Privacy() {
           <h2>What we collect</h2>
           <p>When you order: your name, phone number, email and delivery address. When you send an enquiry: the details you enter and any reference image you attach. When you join the list: your email address.</p>
           <h2>Payments</h2>
-          <p>Payments are handled by Razorpay. Your card, UPI or bank details go to Razorpay and never touch our servers; we receive only the payment reference and status.</p>
+          <p>Checkout uses a manual UPI QR workflow. We store the transaction reference you submit and, if you choose to provide one, a payment screenshot so our authorised team can verify receipt. We never ask for or store your UPI PIN.</p>
           <h2>How we use it</h2>
           <p>To fulfil and deliver orders, answer enquiries, prevent fraud and misuse, and (only if you joined the list) tell you about new pieces.</p>
           <h2>What is stored on your device</h2>

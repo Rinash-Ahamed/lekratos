@@ -7,9 +7,9 @@ import { Modal } from "../Modal";
 import { api } from "./api";
 import { Empty, Field, Loading, Pill, Table, useConfirm, useData, useToast } from "./ui";
 
-const STATUSES: OrderStatus[] = ["pending", "paid", "packed", "shipped", "delivered", "review", "failed", "expired", "cancelled", "refunded"];
-const NEXT: Partial<Record<OrderStatus, OrderStatus>> = { paid: "packed", packed: "shipped", shipped: "delivered" };
-const tone = (s: OrderStatus) => (["paid", "packed", "shipped", "delivered"].includes(s) ? "ok" : ["review", "failed"].includes(s) ? "warn" : "neutral") as "ok" | "warn" | "neutral";
+const STATUSES: OrderStatus[] = ["pending", "payment_pending", "confirmed", "packed", "shipped", "delivered", "payment_rejected", "review", "expired", "cancelled", "refunded", "paid", "failed"];
+const NEXT: Partial<Record<OrderStatus, OrderStatus>> = { confirmed: "packed", paid: "packed", packed: "shipped", shipped: "delivered" };
+const tone = (s: OrderStatus) => (["confirmed", "paid", "packed", "shipped", "delivered"].includes(s) ? "ok" : ["payment_pending", "review", "payment_rejected", "failed"].includes(s) ? "warn" : "neutral") as "ok" | "warn" | "neutral";
 
 export default function OrdersPanel() {
   const o = useData<Order[]>("orders");
@@ -25,7 +25,7 @@ export default function OrdersPanel() {
 
   if (!o.data) return <Loading error={o.error} retry={o.reload} />;
   const current = o.data.find((x) => x.id === open) ?? null;
-  const flagged = (x: Order) => x.status === "review" || (x.extraPayments ?? []).some((e) => !e.refundId);
+  const flagged = (x: Order) => x.status === "review" || x.paymentStatus === "verification_pending" || (x.extraPayments ?? []).some((e) => !e.refundId);
 
   return (
     <div>
@@ -40,7 +40,7 @@ export default function OrdersPanel() {
         {/* eslint-disable-next-line no-restricted-syntax -- file download from an API route, not a page navigation */}
         <a className="btn btn-ghost" href="/api/admin/orders/export" download>Export CSV</a>
       </div>
-      <p className="mt-2 text-sm text-muted">Unpaid checkouts hold stock for a short time, then are released automatically.</p>
+      <p className="mt-2 text-sm text-muted">UPI submissions require a bank/UPI-account check. A reference or screenshot never confirms an order automatically.</p>
       <div className="mt-6">
         {rows.length === 0 ? <Empty>{o.data.length ? "No orders match." : "No orders yet."}</Empty> : (
           <Table caption="Orders" head={["Order", "Customer", "Total", "Status", "Placed", ""]}>
@@ -67,11 +67,8 @@ function OrderModal({ order, onClose, onChanged }: { order: Order; onClose: () =
   const { ask, dialog } = useConfirm();
   const [note, setNote] = useState(order.adminNote ?? "");
   const [track, setTrack] = useState(order.trackingNote ?? "");
-  const [refundAmt, setRefundAmt] = useState("");
-  const [restock, setRestock] = useState(false);
   const [busy, setBusy] = useState(false);
-  const paid = ["paid", "packed", "shipped", "delivered"].includes(order.status);
-  const refundable = order.total - (order.refundedTotal ?? 0);
+  const paid = ["confirmed", "paid", "packed", "shipped", "delivered"].includes(order.status);
 
   const act = async (body: object, ok: string) => {
     setBusy(true);
@@ -91,12 +88,21 @@ function OrderModal({ order, onClose, onChanged }: { order: Order; onClose: () =
           <p>{order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ""}<br />{order.address.city}, {order.address.state} {order.address.pincode}</p>
           <ul className="divide-y divide-line border-y hairline">{order.items.map((i, k) => <li key={k} className="flex justify-between py-2"><span>{i.qty} × {i.name} <span className="text-muted">· {i.color} · {i.size}</span></span><span>{inr(i.price * i.qty)}</span></li>)}</ul>
           <dl className="space-y-1"><div className="flex justify-between"><dt className="text-muted">Subtotal</dt><dd>{inr(order.subtotal)}</dd></div>{order.discount > 0 && <div className="flex justify-between"><dt className="text-muted">Discount {order.couponCode}</dt><dd>− {inr(order.discount)}</dd></div>}<div className="flex justify-between"><dt className="text-muted">Shipping</dt><dd>{inr(order.shipping)}</dd></div><div className="flex justify-between font-semibold"><dt>Total</dt><dd>{inr(order.total)}</dd></div></dl>
-          {order.razorpayPaymentId && <p className="break-all text-xs text-muted">Payment {order.razorpayPaymentId}{order.payment?.method ? ` · ${order.payment.method}` : ""}</p>}
-          {(order.extraPayments ?? []).length > 0 && <p role="alert" className="border border-accent-text p-3 text-accent-text">Duplicate payment detected: {order.extraPayments!.map((e) => `${e.id} (${e.refundId ? "refunded" : "refund pending"})`).join(", ")}</p>}
-          {order.status === "review" && <p role="alert" className="border border-accent-text p-3 text-accent-text">Paid after the stock hold expired and stock could not be re-reserved. Refund the order or fulfil it manually.</p>}
+          {order.paymentReference && <div className="admin-payment-reference"><p className="eyebrow text-muted">UPI reference</p><strong className="select-all">{order.paymentReference}</strong><p className="mt-1 text-xs text-muted">Submitted {order.paymentSubmittedAt ? dateTimeLabel(order.paymentSubmittedAt) : "—"}</p>{order.paymentScreenshotKey && <a className="btn btn-ghost mt-3 !min-h-10" href={`/api/admin/orders/${encodeURIComponent(order.id)}/payment-proof`} target="_blank" rel="noopener">View payment screenshot ↗</a>}</div>}
+          {order.status === "review" && <p role="alert" className="border border-accent-text p-3 text-accent-text">{order.paid ? "Payment was verified, but stock could not be allocated. Contact the customer and resolve this manually." : "The stock hold expired while payment verification was pending. Verify the receiving account first; stock will be checked again before confirmation."}</p>}
         </section>
 
         <section className="space-y-6">
+          {order.paymentStatus === "verification_pending" && (
+            <div className="border border-accent-text bg-accent/20 p-4">
+              <h3 className="serif text-2xl">Payment verification</h3>
+              <p className="mt-2 text-sm">Check the exact amount <strong>{inr(order.total)}</strong> and UPI reference in the receiving account before taking action.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button className="btn btn-solid" disabled={busy} onClick={async () => { if (await ask("Verify this payment?", "Only continue after confirming the exact payment in the bank or UPI account. The order will be confirmed if stock is still allocated.", "Verify payment")) await act({ action: "verify_payment" }, "Payment verified"); }}>Verify payment</button>
+                <button className="btn btn-ghost" disabled={busy} onClick={async () => { const reason = window.prompt("Why is this payment being rejected?"); if (reason?.trim()) await act({ action: "reject_payment", reason: reason.trim() }, "Payment rejected and stock released"); }}>Reject payment</button>
+              </div>
+            </div>
+          )}
           {paid && (
             <div>
               <h3 className="eyebrow mb-2 text-muted">Fulfilment</h3>
@@ -109,19 +115,6 @@ function OrderModal({ order, onClose, onChanged }: { order: Order; onClose: () =
           )}
           {order.status === "pending" && (
             <button className="btn btn-ghost" disabled={busy} onClick={async () => { if (await ask("Cancel this unpaid order?", "The held stock is released. If the customer pays afterwards the payment is flagged for refund.", "Cancel order")) await act({ action: "cancel" }, "Order cancelled"); }}>Cancel unpaid order</button>
-          )}
-          {(paid || order.status === "review") && refundable > 0 && (
-            <div>
-              <h3 className="eyebrow mb-2 text-muted">Refund (max {inr(refundable)})</h3>
-              <Field label="Amount ₹ (blank = full remaining)"><input className="input" inputMode="numeric" value={refundAmt} onChange={(e) => setRefundAmt(e.target.value.replace(/\D/g, ""))} /></Field>
-              <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={restock} onChange={(e) => setRestock(e.target.checked)} /> Return items to stock (full refunds only)</label>
-              <button className="btn btn-ghost mt-3" disabled={busy} onClick={async () => {
-                const amt = refundAmt ? Number(refundAmt) : undefined;
-                if (amt !== undefined && (amt < 1 || amt > refundable)) return say(`Enter an amount between ₹1 and ₹${refundable}`, "error");
-                if (await ask("Issue refund?", `${inr(amt ?? refundable)} will be sent back to the customer through Razorpay. This can't be undone.`, "Refund"))
-                  await act({ action: "refund", amount: amt, restock }, "Refund issued");
-              }}>Refund via Razorpay</button>
-            </div>
           )}
           <div>
             <h3 className="eyebrow mb-2 text-muted">Internal note</h3>

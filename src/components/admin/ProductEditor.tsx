@@ -6,7 +6,7 @@ import type { Collection, Product, Variant } from "@/lib/types";
 import { SIZES } from "@/lib/types";
 import { api, uploadImages } from "./api";
 
-type Draft = Pick<Product, "name" | "collection" | "price" | "description" | "story" | "colors" | "variants" | "images" | "tags" | "published" | "fabric" | "fit" | "care" | "featured"> & {
+type Draft = Pick<Product, "name" | "collection" | "price" | "description" | "story" | "colors" | "variants" | "images" | "tags" | "published" | "fabric" | "fit" | "care" | "featured" | "sku" | "categories" | "displayOrder" | "manualSoldOut" | "status"> & {
   id?: string;
   compareAt?: number;
 };
@@ -28,6 +28,7 @@ export function ProductEditor({
     product ?? {
       name: "", collection: collections[0]?.slug ?? "", price: 1799, description: "", story: "",
       colors: [{ name: "Black", hex: "#16161A" }], variants: [], images: [], tags: [], published: true,
+      sku: "", categories: [], displayOrder: 0, manualSoldOut: false, status: "active",
     },
   );
   const [err, setErr] = useState("");
@@ -59,6 +60,7 @@ export function ProductEditor({
 
       <div className="mt-8 grid gap-5 md:grid-cols-2">
         <L t="Name"><input className="input" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} /></L>
+        <L t="SKU"><input className="input" value={d.sku ?? ""} onChange={(e) => setD({ ...d, sku: e.target.value.toUpperCase() })} placeholder="LK-TEE-001" /></L>
         <L t="Collection">
           <select className="input" value={d.collection} onChange={(e) => setD({ ...d, collection: e.target.value })}>
             {collections.map((c) => <option key={c.slug} value={c.slug} className="text-black">{c.name}</option>)}
@@ -68,12 +70,32 @@ export function ProductEditor({
         <L t="Original price (₹, optional — shows a strike-through)">
           <input className="input" type="number" min={0} value={d.compareAt ?? ""} onChange={(e) => setD({ ...d, compareAt: e.target.value ? Number(e.target.value) : undefined })} />
         </L>
+        <L t="Product status">
+          <select className="input" value={d.status ?? "active"} onChange={(e) => setD({ ...d, status: e.target.value as Product["status"] })}>
+            <option value="active">Active</option><option value="draft">Draft</option><option value="sold_out">Sold out</option><option value="archived">Archived</option>
+          </select>
+        </L>
+        <L t="Display order"><input className="input" type="number" min={0} value={d.displayOrder ?? 0} onChange={(e) => setD({ ...d, displayOrder: Number(e.target.value) })} /></L>
         <L t="The story behind this design" wide><textarea className="input" rows={3} value={d.story} onChange={(e) => setD({ ...d, story: e.target.value })} /></L>
         <L t="Product details" wide><textarea className="input" rows={3} value={d.description} onChange={(e) => setD({ ...d, description: e.target.value })} /></L>
         <L t="Fabric (only what you can stand behind)"><input className="input" value={d.fabric ?? ""} onChange={(e) => setD({ ...d, fabric: e.target.value })} /></L>
         <L t="Fit"><input className="input" value={d.fit ?? ""} onChange={(e) => setD({ ...d, fit: e.target.value })} /></L>
         <L t="Care instructions" wide><input className="input" value={d.care ?? ""} onChange={(e) => setD({ ...d, care: e.target.value })} /></L>
       </div>
+
+      <fieldset className="mt-8">
+        <legend className="eyebrow mb-2 text-muted">Collections / categories</legend>
+        <div className="flex flex-wrap gap-4">
+          {collections.map((collection) => {
+            const selected = (d.categories?.length ? d.categories : [d.collection]).includes(collection.slug);
+            return <label key={collection.slug} className="flex items-center gap-2"><input type="checkbox" checked={selected} onChange={(e) => {
+              const current = d.categories?.length ? d.categories : [d.collection];
+              const categories = e.target.checked ? [...new Set([...current, collection.slug])] : current.filter((slug) => slug !== collection.slug);
+              setD({ ...d, categories, collection: categories[0] ?? d.collection });
+            }} />{collection.name}</label>;
+          })}
+        </div>
+      </fieldset>
 
       <fieldset className="mt-8">
         <legend className="eyebrow mb-2 text-muted">Badges</legend>
@@ -92,6 +114,10 @@ export function ProductEditor({
           <label className="flex items-center gap-2">
             <input type="checkbox" className="h-4 w-4 accent-[var(--fg)]" checked={!!d.featured} onChange={(e) => setD({ ...d, featured: e.target.checked })} />
             Featured on home page
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" className="h-4 w-4 accent-[var(--fg)]" checked={!!d.manualSoldOut} onChange={(e) => setD({ ...d, manualSoldOut: e.target.checked })} />
+            Manually mark sold out
           </label>
         </div>
       </fieldset>

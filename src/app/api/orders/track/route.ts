@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if ("res" in p) return p.res;
 
   const order = await db.orders.byId(p.data.id.toUpperCase());
-  const trackable = order && (PAID_STATUSES.includes(order.status) || order.status === "refunded" || order.status === "review");
+  const trackable = order && (PAID_STATUSES.includes(order.status) || ["payment_pending", "payment_rejected", "refunded", "review"].includes(order.status));
   if (!order || !trackable || digits(order.customer.phone) !== digits(p.data.phone))
     return json({ error: "We couldn't match that order ID and phone number" }, 404);
 

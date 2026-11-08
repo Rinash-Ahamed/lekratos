@@ -9,12 +9,12 @@ function csp(nonce: string): string {
   const dev = process.env.NODE_ENV !== "production";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://checkout.razorpay.com${dev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.razorpay.com",
+    "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.razorpay.com https://lumberjack.razorpay.com" + (dev ? " ws: wss:" : ""),
-    "frame-src https://api.razorpay.com https://checkout.razorpay.com",
+    "connect-src 'self'" + (dev ? " ws: wss:" : ""),
+    "frame-src 'none'",
     "form-action 'self'",
     "base-uri 'self'",
     "object-src 'none'",

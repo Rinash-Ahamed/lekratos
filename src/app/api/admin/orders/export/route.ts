@@ -13,13 +13,13 @@ export async function GET(req: Request) {
   const ctx = await requireAdmin(req);
   if (!isAdminCtx(ctx)) return ctx;
   const orders = await db.orders.all(5000);
-  const head = ["Order ID", "Created", "Status", "Paid", "Customer", "Phone", "Email", "Items", "Subtotal", "Discount", "Shipping", "Total", "Refunded", "Address", "Payment ID", "Tracking note"];
+  const head = ["Order ID", "Created", "Order status", "Payment status", "Paid", "Customer", "Phone", "Email", "Items", "Subtotal", "Discount", "Shipping", "Total", "Refunded", "Address", "UPI reference", "Verified at", "Verified by", "Tracking note"];
   const rows = orders.map((o) => [
-    o.id, o.createdAt, o.status, o.paid ? "yes" : "no", o.customer.name, o.customer.phone, o.customer.email,
+    o.id, o.createdAt, o.status, o.paymentStatus ?? "", o.paid ? "yes" : "no", o.customer.name, o.customer.phone, o.customer.email,
     o.items.map((i) => `${i.qty}x ${i.name} (${i.color}/${i.size})`).join("; "),
     o.subtotal, o.discount, o.shipping, o.total, o.refundedTotal ?? 0,
     [o.address.line1, o.address.line2, o.address.city, o.address.state, o.address.pincode].filter(Boolean).join(", "),
-    o.razorpayPaymentId ?? "", o.trackingNote ?? "",
+    o.paymentReference ?? "", o.paymentVerifiedAt ?? "", o.paymentVerifiedBy ?? "", o.trackingNote ?? "",
   ]);
   await audit(ctx, "orders.export", undefined, { rows: rows.length });
   const csv = [head, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");

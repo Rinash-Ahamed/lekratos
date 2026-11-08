@@ -25,15 +25,15 @@ export function AdminDashboard() {
   const Active = TABS.find(([n]) => n === tab)![1];
   return (
     <ToastHost>
-      <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-5 md:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b hairline pb-4">
+      <div className="admin-shell mx-auto max-w-[1400px] px-4 pb-24 pt-5 md:px-8">
+        <header className="admin-topbar flex flex-wrap items-center justify-between gap-4 border-b hairline pb-4">
           <div className="flex items-center gap-4"><BrandMark className="h-7" /><span className="eyebrow text-muted">Admin</span></div>
           <div className="flex items-center gap-4">
             <a href="/" target="_blank" rel="noopener" className="eyebrow link-underline py-2">View store ↗</a>
             <button className="eyebrow link-underline py-2" onClick={() => void logout()}>Sign out</button>
           </div>
         </header>
-        <nav aria-label="Admin sections" className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
+        <nav aria-label="Admin sections" className="admin-tabs no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
           {TABS.map(([n]) => (
             <button key={n} aria-current={tab === n ? "page" : undefined} onClick={() => setTab(n)} className={`min-h-11 shrink-0 border px-4 text-sm ${tab === n ? "border-primary bg-primary text-primary-fg" : "hairline"}`}>{n}</button>
           ))}

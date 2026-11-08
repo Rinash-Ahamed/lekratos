@@ -3,7 +3,7 @@ import { isAdminCtx, requireAdmin } from "@/lib/admin-auth";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { log } from "@/lib/log";
-import { OrderError, cancelUnpaid, refundOrder, setFulfilment } from "@/lib/orders";
+import { OrderError, cancelUnpaid, rejectManualPayment, setFulfilment, verifyManualPayment } from "@/lib/orders";
 import { orderAction, parseJson } from "@/lib/schemas";
 import { rateLimit, tooMany } from "@/lib/security";
 
@@ -31,9 +31,13 @@ export async function POST(req: Request, { params }: Ctx) {
         order = await cancelUnpaid(id, ctx.actor);
         await audit(ctx, "order.cancel", id);
         break;
-      case "refund":
-        order = await refundOrder(id, { amountRupees: a.amount, restock: a.restock, by: ctx.actor, note: a.note });
-        await audit(ctx, "order.refund", id, { amount: a.amount ?? null, restock: a.restock });
+      case "verify_payment":
+        order = await verifyManualPayment(id, ctx.actor, a.note);
+        await audit(ctx, "payment.verify", id, { reference: order.paymentReference?.slice(-8) ?? null, status: order.status });
+        break;
+      case "reject_payment":
+        order = await rejectManualPayment(id, ctx.actor, a.reason);
+        await audit(ctx, "payment.reject", id, { reference: order.paymentReference?.slice(-8) ?? null, reason: a.reason });
         break;
       case "note": {
         const o = await db.orders.byId(id);
@@ -46,7 +50,7 @@ export async function POST(req: Request, { params }: Ctx) {
     bustCache("catalog");
     return Response.json(order);
   } catch (e) {
-    if (e instanceof OrderError) return Response.json({ error: e.message }, { status: e.code === "NOT_FOUND" ? 404 : e.code === "GATEWAY" ? 502 : 422 });
+    if (e instanceof OrderError) return Response.json({ error: e.message }, { status: e.code === "NOT_FOUND" ? 404 : 422 });
     log.error("admin order action failed", e, { orderId: id, action: a.action });
     return Response.json({ error: "Action failed" }, { status: 500 });
   }

@@ -11,7 +11,7 @@ import type { AuditLog, Banner, Collection, Enquiry, Offer, Order, Product, Stor
  *   webhookEvents[event id]  adminSessions[sid]
  */
 
-export const DEFAULT_SETTINGS: StoreSettings = { shipping: {}, bulk: {} };
+export const DEFAULT_SETTINGS: StoreSettings = { shipping: {}, payment: {}, bulk: {} };
 
 /** v1 rows used "placed" for "awaiting payment". */
 function normalizeOrder(o: Order): Order {
@@ -20,6 +20,19 @@ function normalizeOrder(o: Order): Order {
 }
 
 const byCreatedDesc = <T extends { createdAt: string }>(a: T, b: T) => b.createdAt.localeCompare(a.createdAt);
+const samplePhotography = [
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.32 PM.jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM.jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (1).jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (2).jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.33 PM (3).jpeg",
+  "/tees/WhatsApp Image 2026-11-08 at 5.17.34 PM.jpeg",
+];
+const withSamplePhotography = (product: Product): Product => {
+  if (!product.sample || product.images.length) return product;
+  const index = Math.max(0, Number(product.id.match(/\d+$/)?.[0] ?? 1) - 1) % samplePhotography.length;
+  return { ...product, images: [samplePhotography[index]] };
+};
 
 async function replaceAll<T extends object>(
   col: "collections" | "offers" | "banners",
@@ -39,12 +52,19 @@ async function replaceAll<T extends object>(
 
 export const db = {
   products: {
-    all: async () => (await getDb().list<Product>("products")).sort(byCreatedDesc),
+    all: async () => (await getDb().list<Product>("products")).map(withSamplePhotography).sort(byCreatedDesc),
     published: async () =>
-      (await getDb().list<Product>("products", { where: [{ field: "published", op: "==", value: true }] })).sort(byCreatedDesc),
-    byId: (id: string) => getDb().get<Product>("products", id),
-    bySlug: async (slug: string) =>
-      (await getDb().list<Product>("products", { where: [{ field: "slug", op: "==", value: slug }], limit: 1 }))[0],
+      (await getDb().list<Product>("products", { where: [{ field: "published", op: "==", value: true }] })).map(withSamplePhotography)
+        .filter((p) => p.status !== "draft" && p.status !== "archived")
+        .sort((a, b) => (a.displayOrder ?? 1e9) - (b.displayOrder ?? 1e9) || byCreatedDesc(a, b)),
+    byId: async (id: string) => {
+      const product = await getDb().get<Product>("products", id);
+      return product ? withSamplePhotography(product) : undefined;
+    },
+    bySlug: async (slug: string) => {
+      const product = (await getDb().list<Product>("products", { where: [{ field: "slug", op: "==", value: slug }], limit: 1 }))[0];
+      return product ? withSamplePhotography(product) : undefined;
+    },
     save: async (p: Product) => {
       const next = { ...p, updatedAt: new Date().toISOString() };
       await getDb().set("products", p.id, next);
@@ -79,16 +99,23 @@ export const db = {
       return o ? normalizeOrder(o) : undefined;
     },
     /** Pending orders whose reservation window has lapsed (needs composite index status+reservedUntil). */
-    expiredPending: async (nowIso: string) =>
-      (
-        await getDb().list<Order>("orders", {
+    expiredPending: async (nowIso: string) => {
+      const pending = await getDb().list<Order>("orders", {
           where: [
             { field: "status", op: "==", value: "pending" },
             { field: "reservedUntil", op: "<", value: nowIso },
           ],
           limit: 50,
-        })
-      ).map(normalizeOrder),
+        });
+      const submitted = await getDb().list<Order>("orders", {
+        where: [
+          { field: "status", op: "==", value: "payment_pending" },
+          { field: "reservedUntil", op: "<", value: nowIso },
+        ],
+        limit: 50,
+      });
+      return [...pending, ...submitted].map(normalizeOrder);
+    },
     /** Plain write for non-inventory fields. Stock-affecting transitions live in lib/orders.ts (transactional). */
     save: async (o: Order) => {
       const next = { ...o, updatedAt: new Date().toISOString() };
@@ -121,7 +148,7 @@ export const db = {
   settings: {
     get: async (): Promise<StoreSettings> => {
       const s = await getDb().get<StoreSettings>("settings", "store");
-      return { ...DEFAULT_SETTINGS, ...s, shipping: { ...s?.shipping }, bulk: { ...s?.bulk } };
+      return { ...DEFAULT_SETTINGS, ...s, shipping: { ...s?.shipping }, payment: { ...s?.payment }, bulk: { ...s?.bulk } };
     },
     save: async (s: StoreSettings) => {
       await getDb().set("settings", "store", s);

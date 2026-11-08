@@ -51,7 +51,7 @@ export async function priceCart(lines: RequestedLine[], code?: string): Promise<
     const id = String(l.productId);
     if (!cache.has(id)) cache.set(id, await db.products.byId(id));
     const p = cache.get(id);
-    if (!p || !p.published) {
+    if (!p || !p.published || p.manualSoldOut || p.status === "draft" || p.status === "archived" || p.status === "sold_out") {
       issues.push({ index, message: "No longer available", available: 0 });
       continue;
     }

@@ -4,9 +4,6 @@ import { vi } from "vitest";
 process.env.DATA_BACKEND = "json";
 process.env.ADMIN_SESSION_SECRET = "test-session-secret-0123456789abcdef0123456789";
 process.env.ADMIN_PASSWORD = "correct horse battery staple"; // plaintext is only honoured outside production
-process.env.RAZORPAY_KEY_ID = "rzp_test_unit";
-process.env.RAZORPAY_KEY_SECRET = "unit_key_secret";
-process.env.RAZORPAY_WEBHOOK_SECRET = "unit_webhook_secret";
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
 
 // Next runtime APIs that only exist inside a request.

@@ -16,7 +16,8 @@ export type Col =
   | "auditLogs"
   | "rateLimits"
   | "webhookEvents"
-  | "adminSessions";
+  | "adminSessions"
+  | "paymentReferences";
 
 export interface Where {
   field: string;

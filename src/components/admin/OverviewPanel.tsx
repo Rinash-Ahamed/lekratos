@@ -25,7 +25,7 @@ export default function OverviewPanel() {
         <section aria-label="Needs attention" className="border border-accent-text p-5">
           <h2 className="serif text-2xl">Needs attention</h2>
           <ul className="mt-3 space-y-1 text-sm">
-            {d.needsAttention > 0 && <li><strong>{d.needsAttention}</strong> order(s) need a manual look (payment under review or a duplicate payment) — see Orders.</li>}
+            {d.needsAttention > 0 && <li><strong>{d.needsAttention}</strong> order(s) need payment verification or a manual stock review — see Orders.</li>}
             {d.newEnquiries > 0 && <li><strong>{d.newEnquiries}</strong> new enquir{d.newEnquiries === 1 ? "y" : "ies"} waiting for a reply.</li>}
           </ul>
         </section>

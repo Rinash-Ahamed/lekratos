@@ -1,6 +1,7 @@
 import type { Product } from "./types";
 
-export const inStock = (p: Product) => p.variants.some((v) => v.stock > 0);
+export const inStock = (p: Product) =>
+  p.published && p.status !== "draft" && p.status !== "archived" && p.status !== "sold_out" && !p.manualSoldOut && p.variants.some((v) => v.stock > 0);
 
 export const stockFor = (p: Product, color: string, size: string) =>
   p.variants.find((v) => v.color === color && v.size === size)?.stock ?? 0;

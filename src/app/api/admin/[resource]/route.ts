@@ -47,8 +47,8 @@ async function analytics() {
     ).filter((v) => v.stock > 0).slice(0, 30),
     soldOutVariants: products.reduce((n, p) => n + (p.published ? p.variants.filter((v) => v.stock === 0).length : 0), 0),
     newEnquiries: (await db.enquiries.all(500)).filter((e) => e.status === "new").length,
-    needsAttention: all.filter((o) => o.status === "review" || (o.extraPayments ?? []).some((x) => !x.refundId)).length,
-    pending: all.filter((o) => o.status === "pending").length,
+    needsAttention: all.filter((o) => o.status === "review" || o.paymentStatus === "verification_pending" || (o.extraPayments ?? []).some((x) => !x.refundId)).length,
+    pending: all.filter((o) => o.status === "pending" || o.status === "payment_pending").length,
   };
 }
 
@@ -96,7 +96,9 @@ async function saveProduct(ctx: AdminCtx, req: Request) {
     id: existing?.id ?? newId("P"),
     slug,
     name: b.name,
+    sku: b.sku || undefined,
     collection: b.collection,
+    categories: b.categories?.length ? b.categories : [b.collection],
     price: b.price,
     compareAt: b.compareAt ?? undefined,
     description: b.description,
@@ -110,9 +112,12 @@ async function saveProduct(ctx: AdminCtx, req: Request) {
     art: existing?.art ?? { kind: "stripe", seed: Math.floor(Math.random() * 1000) },
     tags: b.tags,
     featured: b.featured ?? false,
+    displayOrder: b.displayOrder,
+    manualSoldOut: b.manualSoldOut ?? false,
+    status: b.status ?? (b.published === false ? "draft" : "active"),
     sample: existing?.sample,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
-    published: b.published !== false,
+    published: b.status === "archived" || b.status === "draft" ? false : b.published !== false,
   };
   const saved = await db.products.save(product);
   await audit(ctx, existing ? "product.update" : "product.create", saved.id, { name: saved.name, published: saved.published });
@@ -163,6 +168,7 @@ export async function POST(req: Request, { params }: Ctx) {
       const d = p.data;
       const clean = JSON.parse(JSON.stringify(d, (_k, v) => (v === "" || v === null ? undefined : v)));
       clean.shipping = clean.shipping ?? {};
+      clean.payment = clean.payment ?? {};
       clean.bulk = clean.bulk ?? {};
       await db.settings.save(clean);
       await audit(ctx, "settings.update");

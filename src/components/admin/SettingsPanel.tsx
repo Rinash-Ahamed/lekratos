@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import type { Size, StoreSettings } from "@/lib/types";
 import { SIZES } from "@/lib/types";
-import { api } from "./api";
+import { api, uploadPaymentQr } from "./api";
 import { Field, Loading, useData, useToast } from "./ui";
 
 const num = (v: string) => (v === "" ? undefined : Number(v));
@@ -18,6 +19,7 @@ export default function SettingsPanel() {
 
   const up = (p: Partial<StoreSettings>) => setS({ ...s, ...p });
   const ship = (p: Partial<StoreSettings["shipping"]>) => setS({ ...s, shipping: { ...s.shipping, ...p } });
+  const payment = (p: Partial<StoreSettings["payment"]>) => setS({ ...s, payment: { ...s.payment, ...p } });
   const chart = s.sizeChart;
   const save = async () => {
     setBusy(true);
@@ -47,6 +49,24 @@ export default function SettingsPanel() {
           <Field label="Delivery time"><input className="input" placeholder="e.g. 4–7 working days" value={s.shipping.deliveryTime ?? ""} onChange={(e) => ship({ deliveryTime: e.target.value })} /></Field>
           <Field label="Where you deliver" wide><input className="input" value={s.shipping.coverage ?? ""} onChange={(e) => ship({ coverage: e.target.value })} /></Field>
         </div></section>
+
+      <section aria-labelledby="s-pay" className="admin-payment-settings"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow text-accent-text">Manual checkout</p><h2 id="s-pay" className="serif mt-2 text-3xl">UPI payment</h2></div><span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-fg">No gateway</span></div>
+        <p className="mt-3 max-w-2xl text-sm text-muted">Customers scan this QR, submit their UPI reference and optionally attach a screenshot. Orders remain unconfirmed until an admin verifies the receipt in the bank or UPI app.</p>
+        <div className="mt-6 grid gap-6 md:grid-cols-[220px_1fr]">
+          <div>
+            <div className="relative aspect-square overflow-hidden border hairline bg-white p-3">
+              {s.payment.qrImage ? <Image src={s.payment.qrImage} alt="Current UPI payment QR" fill sizes="220px" unoptimized className="object-contain p-3" /> : <div className="grid h-full place-items-center text-center text-sm text-muted">Upload the receiving UPI QR code</div>}
+            </div>
+            <label className="btn btn-ghost mt-3 w-full cursor-pointer">{s.payment.qrImage ? "Replace QR" : "Upload QR"}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp,image/avif" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; try { payment({ qrImage: await uploadPaymentQr(file) }); say("QR uploaded — save settings to publish it"); } catch (error) { say(error instanceof Error ? error.message : "Upload failed", "error"); } event.target.value = ""; }} /></label>
+          </div>
+          <div className="grid content-start gap-4 md:grid-cols-2">
+            <Field label="Receiving UPI ID"><input className="input" placeholder="name@bank" value={s.payment.upiId ?? ""} onChange={(event) => payment({ upiId: event.target.value })} /></Field>
+            <Field label="Payee name"><input className="input" placeholder="LE KRATOS" value={s.payment.payeeName ?? ""} onChange={(event) => payment({ payeeName: event.target.value })} /></Field>
+            <Field label="Stock reservation (minutes)" hint="Items are released automatically if payment is not verified in time."><input className="input" type="number" min={5} max={240} value={s.payment.reservationMinutes ?? 20} onChange={(event) => payment({ reservationMinutes: Number(event.target.value) })} /></Field>
+            <Field label="Customer instructions" wide><textarea className="input" rows={4} maxLength={800} placeholder="Any bank-specific or payment instructions" value={s.payment.instructions ?? ""} onChange={(event) => payment({ instructions: event.target.value })} /></Field>
+          </div>
+        </div>
+      </section>
 
       <section aria-labelledby="s-bulk"><h2 id="s-bulk" className="serif text-3xl">Bulk orders</h2>
         <div className="mt-5 grid gap-4 md:grid-cols-2">

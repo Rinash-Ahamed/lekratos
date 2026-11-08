@@ -1,9 +1,4 @@
 import { test as base, expect, type Page } from "@playwright/test";
-import { E2E } from "../../playwright.config";
-import { FakeRazorpay } from "../support/fake-razorpay";
-
-export const fake = new FakeRazorpay(E2E.keyId, E2E.keySecret, E2E.webhookSecret);
-let started = false;
 
 /** Collects console errors / failed requests so tests can assert the page is clean. */
 export const test = base.extend<{ problems: string[] }>({
@@ -14,34 +9,7 @@ export const test = base.extend<{ problems: string[] }>({
     await use(problems);
   },
 });
-test.beforeAll(async () => { if (!started) { started = true; await fake.start(E2E.gateway); } });
-test.afterAll(async () => { /* the worker exits; the fake dies with it */ });
 export { expect };
-
-/** Installs a stand-in for Razorpay's checkout.js. `outcome` decides what the "customer" does in the modal. */
-export async function stubCheckout(page: Page, outcome: { mode: "pay" | "fail" | "dismiss" | "badsig" }) {
-  await page.exposeFunction("__lkPay", async (razorpayOrderId: string) => {
-    if (outcome.mode === "pay" || outcome.mode === "badsig") {
-      const p = fake.createPayment(razorpayOrderId);
-      return { id: p.id, sig: outcome.mode === "badsig" ? "0".repeat(64) : fake.checkoutSignature(razorpayOrderId, p.id) };
-    }
-    return null;
-  });
-  await page.route("https://checkout.razorpay.com/v1/checkout.js", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.Razorpay = function (o) {
-        this.on = function (e, cb) { if (e === "payment.failed") this._failed = cb; };
-        this.open = async function () {
-          const r = await window.__lkPay(o.order_id);
-          if (r) return o.handler({ razorpay_order_id: o.order_id, razorpay_payment_id: r.id, razorpay_signature: r.sig });
-          if (${JSON.stringify(outcome.mode)} === "fail" && this._failed) return this._failed({ error: { description: "Card declined (test)" } });
-          o.modal && o.modal.ondismiss && o.modal.ondismiss();
-        };
-      };`,
-    }),
-  );
-}
 
 export async function addFirstProduct(page: Page) {
   await page.goto("/shop");

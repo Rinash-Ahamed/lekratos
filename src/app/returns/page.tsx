@@ -12,7 +12,7 @@ export default async function Returns() {
       {s.returnsPolicy ? <Text text={s.returnsPolicy} /> : (
         <p>The returns and exchange policy hasn&apos;t been published yet. Until it is, please <Link href="/contact" className="link-underline">contact us</Link> before ordering if you have questions about exchanges or refunds.</p>
       )}
-      <p>If a payment was taken but your order could not be completed, it is refunded in full to the original payment method.</p>
+      <p>If a verified payment cannot be fulfilled, our team will contact you and arrange a manual UPI refund. Refund timing and the reference will be recorded against the order.</p>
     </PolicyShell>
   );
 }

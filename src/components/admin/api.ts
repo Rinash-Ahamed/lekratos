@@ -34,6 +34,15 @@ export async function uploadImages(files: FileList | File[]): Promise<string[]> 
   return j.urls as string[];
 }
 
+export async function uploadPaymentQr(file: File): Promise<string> {
+  const form = new FormData();
+  form.set("file", file);
+  const response = await send("payment-qr", { method: "POST", body: form });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error ?? "QR upload failed");
+  return result.url as string;
+}
+
 export async function logout() {
   await send("logout", { method: "POST" }).catch(() => undefined);
   window.location.href = "/admin/login";

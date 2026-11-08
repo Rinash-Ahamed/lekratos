@@ -4,9 +4,12 @@ import { useState } from "react";
 import type { OrderStatus } from "@/lib/types";
 import { dateLabel, inr } from "@/lib/format";
 
-const STEPS: OrderStatus[] = ["paid", "packed", "shipped", "delivered"];
+const STEPS: OrderStatus[] = ["confirmed", "packed", "shipped", "delivered"];
 const LABEL: Record<OrderStatus, string> = {
   pending: "Awaiting payment",
+  payment_pending: "Payment verification pending",
+  payment_rejected: "Payment verification unsuccessful",
+  confirmed: "Order confirmed",
   paid: "Order confirmed",
   packed: "Packed",
   shipped: "Shipped",
@@ -63,12 +66,13 @@ export function TrackForm({ initialId }: { initialId: string }) {
       {order && (
         <div className="mt-12">
           <p className="eyebrow text-muted">Order {order.id} · {dateLabel(order.createdAt)}</p>
-          {["cancelled", "refunded", "review"].includes(order.status) ? (
+          {["pending", "payment_pending", "payment_rejected", "cancelled", "expired", "failed", "refunded", "review"].includes(order.status) ? (
             <p className="serif mt-4 text-4xl">{LABEL[order.status]}</p>
           ) : (
             <ol className="mt-6">
               {STEPS.map((s, i) => {
-                const reached = STEPS.indexOf(order.status) >= i;
+                const progressStatus = order.status === "paid" ? "confirmed" : order.status;
+                const reached = STEPS.indexOf(progressStatus) >= i;
                 return (
                   <li key={s} className="flex items-center gap-4 border-t hairline py-4">
                     <span className={`grid h-7 w-7 place-items-center rounded-full text-sm ${reached ? "bg-accent text-accent-fg" : "border hairline text-muted"}`}>

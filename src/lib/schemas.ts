@@ -53,12 +53,10 @@ export const checkoutBody = z.object({
   }),
 });
 
-export const verifyBody = z.object({
-  orderId: z.string().max(40),
-  token: z.string().max(80),
-  razorpay_order_id: z.string().max(60),
-  razorpay_payment_id: z.string().max(60),
-  razorpay_signature: z.string().max(128),
+export const manualPaymentBody = z.object({
+  orderId: text(40, 3),
+  token: z.string().min(16).max(120),
+  reference: z.string().transform((s) => s.trim().toUpperCase().replace(/\s+/g, "")).pipe(z.string().regex(/^[A-Z0-9-]{6,40}$/, "Enter a valid UPI transaction/reference ID")),
 });
 
 export const trackBody = z.object({ id: text(40, 3), phone });
@@ -77,15 +75,17 @@ const imageUrl = z
   .string()
   .max(600)
   .refine(
-    (u) => u.startsWith("/uploads/") || /^https:\/\/(firebasestorage|storage)\.googleapis\.com\//.test(u),
+    (u) => u.startsWith("/uploads/") || u.startsWith("/tees/") || /^https:\/\/(firebasestorage|storage)\.googleapis\.com\//.test(u),
     "Image must be uploaded through the dashboard",
   );
 
 export const productBody = z.object({
   id: z.string().max(80).optional(),
+  sku: text(60).optional(),
   name: text(100, 1),
   slug: slug.optional(),
   collection: text(80),
+  categories: z.array(text(80, 1)).max(12).optional(),
   price: z.coerce.number().int().min(1).max(1_000_000),
   compareAt: z.coerce.number().int().min(1).max(1_000_000).optional().nullable(),
   description: multiline(1200),
@@ -98,6 +98,9 @@ export const productBody = z.object({
   images: z.array(imageUrl).max(12),
   tags: z.array(z.enum(["new", "bestseller", "limited", "trending"])).max(4),
   featured: z.boolean().optional(),
+  displayOrder: z.coerce.number().int().min(0).max(100000).optional(),
+  manualSoldOut: z.boolean().optional(),
+  status: z.enum(["active", "draft", "archived", "sold_out"]).optional(),
   published: z.boolean().optional(),
 });
 
@@ -144,6 +147,13 @@ export const settingsBody = z.object({
     deliveryTime: text(80).optional(),
     coverage: text(160).optional(),
   }),
+  payment: z.object({
+    upiId: z.string().transform((s) => s.trim()).pipe(z.string().max(120)).optional(),
+    payeeName: text(120).optional(),
+    qrImage: imageUrl.optional().or(z.literal("")),
+    instructions: multiline(800).optional(),
+    reservationMinutes: z.coerce.number().int().min(5).max(240).optional(),
+  }),
   returnsPolicy: multiline(4000).optional(),
   privacyPolicy: multiline(8000).optional(),
   termsText: multiline(8000).optional(),
@@ -162,9 +172,10 @@ export const settingsBody = z.object({
 });
 
 export const orderAction = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("fulfil"), status: z.enum(["paid", "packed", "shipped", "delivered"]), trackingNote: text(300).optional() }),
+  z.object({ action: z.literal("fulfil"), status: z.enum(["confirmed", "paid", "packed", "shipped", "delivered"]), trackingNote: text(300).optional() }),
+  z.object({ action: z.literal("verify_payment"), note: text(300).optional() }),
+  z.object({ action: z.literal("reject_payment"), reason: text(300, 3) }),
   z.object({ action: z.literal("cancel") }),
-  z.object({ action: z.literal("refund"), amount: z.coerce.number().int().min(1).max(1_000_000).optional(), restock: z.boolean(), note: text(200).optional() }),
   z.object({ action: z.literal("note"), adminNote: multiline(500) }),
 ]);
 

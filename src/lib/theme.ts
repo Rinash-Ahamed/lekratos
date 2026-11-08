@@ -29,7 +29,7 @@ export interface ThemeTokens {
   /** Hairlines and borders */ line: string;
   /** Supporting natural tone (success, small details) */ olive: string;
   /** Logo layers: "le.k" and "ratos" */ logoA: string; logoB: string;
-  /** Colour handed to Razorpay checkout (white text on it) */ checkout: string;
+  /** Brand colour used in the manual UPI checkout */ checkout: string;
 }
 
 export const TOKENS: ThemeTokens = {

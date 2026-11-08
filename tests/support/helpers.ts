@@ -7,19 +7,12 @@ import { db } from "@/lib/db";
 import { priceCart, type PriceOk } from "@/lib/pricing";
 import type { Product, Size, Variant } from "@/lib/types";
 import { SIZES } from "@/lib/types";
-import { FakeRazorpay } from "./fake-razorpay";
 
 export function freshDb() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lk-test-"));
   const store = createJsonDb(dir);
   setDbForTests(store);
   return { store, dir };
-}
-
-export async function startFakeGateway() {
-  const fake = await new FakeRazorpay(process.env.RAZORPAY_KEY_ID!, process.env.RAZORPAY_KEY_SECRET!, process.env.RAZORPAY_WEBHOOK_SECRET!).start();
-  process.env.RAZORPAY_API_BASE = fake.base;
-  return fake;
 }
 
 export function mkProduct(over: Partial<Product> & { id: string; stock?: Partial<Record<Size, number>>; colors?: string[] }): Product {
